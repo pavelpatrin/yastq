@@ -14,28 +14,18 @@ CONTINUE=1;
 # Tasks loop
 while [[ $CONTINUE -eq 1 ]]
 do
-	# If is what to do
-	if [[ $($WC -l $QUEUE_DELAYED_FILE | $CUT -f 1 -d " ") -gt 0 ]]; then
+	if [[ -e $TASKS_QUEUE_PIPE ]]; then
 		# Read next task
-		TASK=$($HEAD -n 1 $QUEUE_DELAYED_FILE)
+		TASK=$($CAT $TASKS_QUEUE_PIPE)
 
 		# Log task start
 		log_worker "$$ Running task $TASK"
 
-		# Remove task from delayed file 
-		$TAIL -n +2 $QUEUE_DELAYED_FILE | $SPONGE $QUEUE_DELAYED_FILE
-
-		# Add task to a active file
-		echo "$TASK" >> $QUEUE_ACTIVE_FILE
-		
 		# Run task
 		eval "$TASK &"; wait; 
 		CODE=$?
-
-		# Remove task from a active file
-		$GREP -v $$ $QUEUE_ACTIVE_FILE | $SPONGE $QUEUE_ACTIVE_FILE
 		
-		if [ $CODE ]; then
+		if [[ $CODE -eq 0 ]]; then
 			# Put it into completes file
 			echo "$TASK" >> $QUEUE_COMPLETE_FILE
 		else 
@@ -46,7 +36,7 @@ do
 		# Log task end
 		log_worker "$$ Running task finished with code $CODE"
 	else
-		# Sleep for one second before next check
+		# Pipe is not exists. Sleep
 		sleep 1
 	fi
 done

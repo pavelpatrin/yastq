@@ -5,7 +5,6 @@ source `dirname $0`/common.sh
 
 function show_status() {
 	echo "Delayed $($WC -l $QUEUE_DELAYED_FILE | $CUT -f 1 -d " ") tasks"
-	echo "Active $($WC -l $QUEUE_ACTIVE_FILE | $CUT -f 1 -d " ") tasks"
 	echo "Complete $($WC -l $QUEUE_COMPLETE_FILE | $CUT -f 1 -d " ") tasks"
 	echo "Failed $($WC -l $QUEUE_FAILED_FILE | $CUT -f 1 -d " ") tasks"
 }
@@ -48,6 +47,28 @@ function start_workers() {
 	fi
 }
 
+function start_tasks_queue() {
+	eval "queue.sh &"
+	echo -n "$! " >> $TASKS_QUEUE_PID_FILE
+
+	if [[ -e $TASKS_QUEUE_PID_FILE ]]; then
+		log_master "Starting tasks queue"
+		echo -n "$!" > $TASKS_QUEUE_PID_FILE
+	else
+		log_master "Tasks queue is already running"
+	fi
+}
+
+function stop_tasks_queue() {
+	if [[ -e $TASKS_QUEUE_PID_FILE ]]; then
+		log_master "Sending kill signal to tasks queue"
+		$KILL -9 $($CAT $TASKS_QUEUE_PID_FILE)
+		$RM -f $TASKS_QUEUE_PID_FILE
+	else
+		log_master "Tasks queue is not running"
+	fi
+}
+
 function append_queue() {
 	read COMMAND
 	echo $COMMAND >> $QUEUE_DELAYED_FILE
@@ -56,9 +77,11 @@ function append_queue() {
 case $1 in 
 	"start")
 		start_workers
+		start_tasks_queue
 		;;
 	"stop")
 		stop_workers
+		stop_tasks_queue
 		;;
 	"status")
 		show_status
