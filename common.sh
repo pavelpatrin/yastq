@@ -16,8 +16,6 @@ RM=`which rm`
 if ! [[ -e $RM ]]; then echo "rm is not found"; exit 1; fi
 CAT=`which cat`
 if ! [[ -e $CAT ]]; then echo "cat is not found"; exit 1; fi
-CUT=`which cut`
-if ! [[ -e $CUT ]]; then echo "cut is not found"; exit 1; fi
 KILL=`which kill`
 if ! [[ -e $KILL ]]; then echo "kill is not found"; exit 1; fi
 HEAD=`which head`

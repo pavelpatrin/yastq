@@ -14,10 +14,10 @@ function log_manager() {
 }
 
 function show_status() {
-	echo "Running $($WC -l $WORKERS_PIDS_FILE | $CUT -f 1 -d " ") workers"
-	echo "Delayed $($WC -l $QUEUE_DELAYED_FILE | $CUT -f 1 -d " ") tasks"
-	echo "Complete $($WC -l $QUEUE_COMPLETE_FILE | $CUT -f 1 -d " ") tasks"
-	echo "Failed $($WC -l $QUEUE_FAILED_FILE | $CUT -f 1 -d " ") tasks"
+	echo "Running $($CAT $WORKERS_PIDS_FILE 2>/dev/null | $WC -w) workers"
+	echo "Delayed $($CAT $QUEUE_DELAYED_FILE 2>/dev/null | $WC -l) tasks"
+	echo "Complete $($CAT $QUEUE_COMPLETE_FILE 2>/dev/null | $WC -l) tasks"
+	echo "Failed $($CAT $QUEUE_FAILED_FILE 2>/dev/null | $WC -l) tasks"
 }
 
 function start_workers() {
