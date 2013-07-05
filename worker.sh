@@ -19,32 +19,26 @@ trap 'CONTINUE=0' 15
 log_worker "Worker starting"
 
 # Continue next task after
-CONTINUE=1;
+CONTINUE=1
 
 # Tasks loop
 while [[ $CONTINUE -eq 1 ]]
 do
 	# Read next task
-	TASK=$($CAT $TASKS_QUEUE_PIPE 2>/dev/null)
+	read TASK < $TASKS_QUEUE_PIPE 2>/dev/null
 
-	if [[ -n "$TASK" ]]; then
+	if [[ -n "$TASK" ]]
+	then
 		# Log task start
-		log_worker "Running task $TASK"
+		log_worker "Running task: $TASK"
 
 		# Run task
-		eval "$TASK &"; wait; 
+		eval "$TASK 2>&1 >/dev/null &"
+		wait $!
 		CODE=$?
-		
-		if [[ $CODE -eq 0 ]]; then
-			# Put it into completes file
-			echo "$TASK" | $TS >> $QUEUE_COMPLETE_FILE
-		else 
-			# Put it into errors file
-			echo "$TASK" | $TS >> $QUEUE_FAILED_FILE
-		fi
 
 		# Log task end
-		log_worker "Running task finished with code $CODE"
+		log_worker "Running task finished with code $CODE: $TASK "
 	else
 		# Task is empty. Sleep
 		sleep 1

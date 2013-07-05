@@ -5,4 +5,4 @@
 # Script directory
 SCRIPT_DIR="/home/pavelpat/Projects/yastq"
 SCRIPT_WORKER=$SCRIPT_DIR/worker.sh
-SCRIPT_QUEUE=$SCRIPT_DIR/queue.sh
+SCRIPT_TASKS_QUEUE=$SCRIPT_DIR/queue.sh

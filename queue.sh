@@ -44,23 +44,25 @@ log_queue "Starting task queue"
 
 # Infinitie loop
 while [[ 0 ]]; do
-	if ! [[ $SEND_EMPTY_LINES -eq 1 ]]; then
+	if ! [[ $SEND_EMPTY_LINES -eq 1 ]]
+	then
 		# Read new task
-		TASK=$($HEAD -n 1 $QUEUE_DELAYED_FILE)
+		TASK=$($HEAD -n 1 $TASKS_QUEUE_FILE)
 
 		# If task is not empty
-		if [[ -n $TASK ]]; then
+		if [[ -n $TASK ]]
+		then
 			# Log action 
 			log_queue "Sending task '$TASK' to pipe"
 
-			# Send new task
+			# Send new task to pipe
 			echo $TASK > $TASKS_QUEUE_PIPE
 
-			# Remove task
-			$TAIL -n +2 $QUEUE_DELAYED_FILE | $SPONGE $QUEUE_DELAYED_FILE
+			# Remove task from tasks file
+			$TAIL -n +2 $TASKS_QUEUE_FILE | $SPONGE $TASKS_QUEUE_FILE
 		fi
 	else
 		# Send empty lines to pipe
-		echo "" > $TASKS_QUEUE_PIPE
+		echo "" > $QUEUE_TASKS_PIPE
 	fi
 done

@@ -15,9 +15,6 @@ function log_manager() {
 
 function show_status() {
 	echo "Running $($CAT $WORKERS_PIDS_FILE 2>/dev/null | $WC -w) workers"
-	echo "Delayed $($CAT $QUEUE_DELAYED_FILE 2>/dev/null | $WC -l) tasks"
-	echo "Complete $($CAT $QUEUE_COMPLETE_FILE 2>/dev/null | $WC -l) tasks"
-	echo "Failed $($CAT $QUEUE_FAILED_FILE 2>/dev/null | $WC -l) tasks"
 }
 
 function start_workers() {
@@ -25,13 +22,18 @@ function start_workers() {
 	local MAX_PARALLEL_SHEDULES=$($GREP processor /proc/cpuinfo | $WC -l)
 	log_manager "Detected $MAX_PARALLEL_SHEDULES CPU cores"
 
-	if ! [[ -e $WORKERS_PIDS_FILE ]]; then
+	if ! [[ -e $WORKERS_PIDS_FILE ]]
+	then
 		log_manager "Starting sheduler workers"
 		echo -n "" > $WORKERS_PIDS_FILE
-		for (( i=1; i<=$MAX_PARALLEL_SHEDULES; i++ )); do
-			eval "$SCRIPT_WORKER &"
+		for ((i=1; i<=$MAX_PARALLEL_SHEDULES; i++))
+		do
+			# Log about start
+			log_manager "Starting new worker"
+
+			# Run worker script with nohup
+			$NOHUP $SCRIPT_WORKER > /dev/null 2>&1 &
 			echo -n "$! " >> $WORKERS_PIDS_FILE
-			log_manager "Started worker $!"
 		done
 	else
 		log_manager "Sheduler is already running"
@@ -39,7 +41,8 @@ function start_workers() {
 }
 
 function stop_workers() {
-	if [[ -e $WORKERS_PIDS_FILE ]]; then
+	if [[ -e $WORKERS_PIDS_FILE ]]
+	then
 		log_manager "Sending stop signal to workers"
 		$KILL -15 $($CAT $WORKERS_PIDS_FILE)
 
@@ -54,7 +57,7 @@ function stop_workers() {
 }
 
 function wait_workers() {
-	while [[ ${?} == 0 ]] 
+	while [[ ${?} == 0 ]]
 	do
 	    sleep 1 
 	    $PS --pid $($CAT $WORKERS_PIDS_FILE) 2>&1 > /dev/null
@@ -62,11 +65,13 @@ function wait_workers() {
 }
 
 function start_tasks_queue() {
-	eval "$SCRIPT_QUEUE &"
-	echo -n "$! " >> $TASKS_QUEUE_PID_FILE
+	if ! [[ -e $TASKS_QUEUE_PID_FILE ]]
+	then
+		# Log about start
+		log_manager "Starting new tasks queue"
 
-	if [[ -e $TASKS_QUEUE_PID_FILE ]]; then
-		log_manager "Starting tasks queue"
+		# Run tasks queue script with nohup
+		$NOHUP $SCRIPT_TASKS_QUEUE > /dev/null 2>&1 &
 		echo -n "$!" > $TASKS_QUEUE_PID_FILE
 	else
 		log_manager "Tasks queue is already running"
@@ -74,7 +79,8 @@ function start_tasks_queue() {
 }
 
 function stop_tasks_queue() {
-	if [[ -e $TASKS_QUEUE_PID_FILE ]]; then
+	if [[ -e $TASKS_QUEUE_PID_FILE ]]
+	then
 		log_manager "Sending kill signal to tasks queue"
 		$KILL -9 $($CAT $TASKS_QUEUE_PID_FILE)
 		$RM -f $TASKS_QUEUE_PID_FILE
@@ -84,7 +90,8 @@ function stop_tasks_queue() {
 }
 
 function free_tasks_queue() {
-	if [[ -e $TASKS_QUEUE_PID_FILE ]]; then
+	if [[ -e $TASKS_QUEUE_PID_FILE ]]
+	then
 		log_manager "Sending USR1 signal to tasks queue"
 		$KILL -10 $($CAT $TASKS_QUEUE_PID_FILE)
 	else
@@ -92,9 +99,9 @@ function free_tasks_queue() {
 	fi
 }
 
-function append_queue() {
+function append_tasks_queue() {
 	read COMMAND
-	echo $COMMAND >> $QUEUE_DELAYED_FILE
+	echo $COMMAND >> $TASKS_QUEUE_FILE
 }
 
 case $1 in 
@@ -111,7 +118,7 @@ case $1 in
 		show_status
 		;;
 	"add-task")
-		append_queue
+		append_tasks_queue
 		;;
 	*)
 		echo "Usage: manager.sh start|stop|status|add-task"

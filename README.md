@@ -1,4 +1,4 @@
-# Yet another simplest task queue
+# Yet another simplest tasks queue
 
 ## Installation:
 1. install moreutils package
