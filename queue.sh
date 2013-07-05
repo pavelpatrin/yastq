@@ -1,7 +1,15 @@
 #!/bin/bash
 
-# Include common code
-source `dirname $0`/common.sh
+# Required file
+INCLUDE="/home/pavelpat/Sheduler/common.sh"
+
+# Include required file
+if [[ -e $INCLUDE ]]; then 
+	source $INCLUDE
+else 
+	echo "Please set correct $INCLUDE path"
+	exit 1
+fi
 
 # On USR1 selecting mode sending empty lines
 trap 'set_mode_empty_lines' 10
