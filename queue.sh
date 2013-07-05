@@ -9,7 +9,7 @@ else echo "Config file not found"; exit 1; fi
 source $SCRIPT_DIR/common.sh
 
 function log_queue() {
-	echo "$($DATE) (queue) $1" >> $LOG_QUEUE
+	echo "$($DATE +'%F %T') (queue) $1" >> $LOG_QUEUE
 }
 
 function set_mode_tasks() {
