@@ -14,14 +14,16 @@ if ! [[ -n $MAX_PARALLEL_SHEDULES ]]; then echo "Error: MAX_PARALLEL_SHEDULES is
 # Get and check utilities paths
 WC=`which wc`
 if ! [[ -e $WC ]]; then echo "Error: wc is not found"; exit 1; fi
-TS=`which ts`
-if ! [[ -e $TS ]]; then echo "Error: ts is not found"; exit 1; fi
 PS=`which ps`
 if ! [[ -e $PS ]]; then echo "Error: ps is not found"; exit 1; fi
 RM=`which rm`
 if ! [[ -e $RM ]]; then echo "Error: rm is not found"; exit 1; fi
 CAT=`which cat`
 if ! [[ -e $CAT ]]; then echo "Error: cat is not found"; exit 1; fi
+SED=`which sed`
+if ! [[ -e $SED ]]; then echo "Error: sed is not found"; exit 1; fi
+DATE=`which date`
+if ! [[ -e $DATE ]]; then echo "Error: date is not found"; exit 1; fi
 KILL=`which kill`
 if ! [[ -e $KILL ]]; then echo "Error: kill is not found"; exit 1; fi
 HEAD=`which head`
@@ -34,8 +36,6 @@ TOUCH=`which touch`
 if ! [[ -e $TOUCH ]]; then echo "Error: touch is not found"; exit 1; fi
 NOHUP=`which nohup`
 if ! [[ -e $NOHUP ]]; then echo "Error: nohup is not found"; exit 1; fi
-SPONGE=`which sponge`
-if ! [[ -e $SPONGE ]]; then echo "Error: sponge is not found"; exit 1; fi
 MKFIFO=`which mkfifo`
 if ! [[ -e $MKFIFO ]]; then echo "Error: mkfifo is not found"; exit 1; fi
 

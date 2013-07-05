@@ -9,8 +9,8 @@ else echo "Config file not found"; exit 1; fi
 source $SCRIPT_DIR/common.sh
 
 function log_manager() {
-	echo "(manager) $1" | $TS
-	echo "(manager) $1" | $TS >> $LOG_MANAGER
+	echo "$($DATE +'%F %T') (manager) $1"
+	echo "$($DATE +'%F %T') (manager) $1" >> $LOG_MANAGER
 }
 
 function show_status() {
@@ -38,7 +38,7 @@ function start_workers() {
 function stop_workers() {
 	if [[ -e $WORKERS_PIDS_FILE ]]
 	then
-		log_manager "Sending stop signal to workers"
+		log_manager "Sending TERM signal to workers"
 		$KILL -TERM $($CAT $WORKERS_PIDS_FILE)
 
 		log_manager "Waiting for workers"

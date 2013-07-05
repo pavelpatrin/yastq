@@ -9,7 +9,7 @@ else echo "Config file not found"; exit 1; fi
 source $SCRIPT_DIR/common.sh
 
 function log_worker() {
-	echo "(worker $$) $1" | $TS >> $LOG_WORKER
+	echo "$($DATE +'%F %T') (worker $$) $1" >> $LOG_WORKER
 }
 
 function prevent_next_iteration() {

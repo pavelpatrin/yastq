@@ -9,7 +9,7 @@ else echo "Config file not found"; exit 1; fi
 source $SCRIPT_DIR/common.sh
 
 function log_queue() {
-	echo "(queue) $1" | $TS >> $LOG_QUEUE
+	echo "$($DATE) (queue) $1" >> $LOG_QUEUE
 }
 
 function set_mode_tasks() {
@@ -59,7 +59,7 @@ while [[ 0 ]]; do
 			echo $TASK > $TASKS_QUEUE_PIPE
 
 			# Remove task from tasks file
-			$TAIL -n +2 $TASKS_QUEUE_FILE | $SPONGE $TASKS_QUEUE_FILE
+			$SED -i 1d $TASKS_QUEUE_FILE
 		fi
 	else
 		# Send empty lines to pipe
