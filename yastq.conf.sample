@@ -6,6 +6,10 @@
 # SCRIPT_DIR=/absolute/path/to/script/directory
 SCRIPT_DIR="/home/pavelpat/Projects/yastq"
 
+# Common part of all scripts
+# SCRIPT_WORKER=/absolute/path/to/script/directory/common.sh
+SCRIPT_COMMON=$SCRIPT_DIR/common.sh
+
 # Worker script
 # SCRIPT_WORKER=/absolute/path/to/script/directory/worker.sh
 SCRIPT_WORKER=$SCRIPT_DIR/worker.sh
