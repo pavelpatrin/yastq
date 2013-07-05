@@ -1,43 +1,58 @@
 #!/bin/bash
 
-# Correct $PATH
-PATH=$PATH:`dirname $0`
+# Include config file
+if [[ -e ~/.yastq.conf ]]; then source ~/.yastq.conf
+elif [[ -e /etc/yastq.conf ]]; then source /etc/yastq.conf
+else echo "Config file not found"; exit 1; fi
+
+# Get and check utilities paths
+WC=`which wc`
+if ! [[ -e $WC ]]; then echo "wc is not found"; exit 1; fi
+TS=`which ts`
+if ! [[ -e $TS ]]; then echo "ts is not found"; exit 1; fi
+PS=`which ps`
+if ! [[ -e $PS ]]; then echo "ps is not found"; exit 1; fi
+RM=`which rm`
+if ! [[ -e $RM ]]; then echo "rm is not found"; exit 1; fi
+CAT=`which cat`
+if ! [[ -e $CAT ]]; then echo "cat is not found"; exit 1; fi
+CUT=`which cut`
+if ! [[ -e $CUT ]]; then echo "cut is not found"; exit 1; fi
+KILL=`which kill`
+if ! [[ -e $KILL ]]; then echo "kill is not found"; exit 1; fi
+HEAD=`which head`
+if ! [[ -e $HEAD ]]; then echo "head is not found"; exit 1; fi
+TAIL=`which tail`
+if ! [[ -e $TAIL ]]; then echo "tail is not found"; exit 1; fi
+GREP=`which grep`
+if ! [[ -e $GREP ]]; then echo "grep is not found"; exit 1; fi
+TOUCH=`which touch`
+if ! [[ -e $TOUCH ]]; then echo "touch is not found"; exit 1; fi
+SPONGE=`which sponge`
+if ! [[ -e $SPONGE ]]; then echo "sponge is not found"; exit 1; fi
+MKFIFO=`which mkfifo`
+if ! [[ -e $MKFIFO ]]; then echo "mkfifo is not found"; exit 1; fi
 
 # File with queue
-QUEUE_DELAYED_FILE=db/delayed
+QUEUE_DELAYED_FILE=$SCRIPT_DIR/db/delayed
 
 # File with running tasks
-QUEUE_COMPLETE_FILE=db/complete
+QUEUE_COMPLETE_FILE=$SCRIPT_DIR/db/complete
 
 # File with failed tasks
-QUEUE_FAILED_FILE=db/failed
+QUEUE_FAILED_FILE=$SCRIPT_DIR/db/failed
 
 # Workers pids file
-WORKERS_PIDS_FILE=pid/workers
+WORKERS_PIDS_FILE=$SCRIPT_DIR/pid/workers
 
 # Tasks queue
-TASKS_QUEUE_PIPE=pipe/tasks
-TASKS_QUEUE_PID_FILE=pid/tasksqueue
-
-# Utilities paths
-WC=wc
-TS=ts
-PS=ps
-RM=rm
-CAT=cat
-CUT=cut
-KILL=kill
-HEAD=head
-TAIL=tail
-GREP=grep
-TOUCH=touch
-SPONGE=sponge
-MKFIFO=mkfifo
+TASKS_QUEUE_PIPE=$SCRIPT_DIR/pipe/tasks
+TASKS_QUEUE_PID_FILE=$SCRIPT_DIR/pid/tasksqueue
 
 # Logs
-LOG_WORKER=log/worker.log
-LOG_MANAGER=log/manager.log
-LOG_QUEUE=log/queue.log
+LOG_WORKER=$SCRIPT_DIR/log/worker.log
+LOG_MANAGER=$SCRIPT_DIR/log/manager.log
+LOG_QUEUE=$SCRIPT_DIR/log/queue.log
 
 # Create queue files
 if ! [[ -e $QUEUE_DELAYED_FILE ]]; then
@@ -65,16 +80,3 @@ fi
 if ! [[ -e $TASKS_QUEUE_PIPE ]]; then
 	$MKFIFO $TASKS_QUEUE_PIPE
 fi
-
-function log_manager() {
-	echo "(manager) $1" | $TS
-	echo "(manager) $1" | $TS >> $LOG_MANAGER
-}
-
-function log_queue() {
-	echo "(queue) $1" | $TS >> $LOG_QUEUE
-}
-
-function log_worker() {
-	echo "(worker) $1" | $TS >> $LOG_WORKER
-}

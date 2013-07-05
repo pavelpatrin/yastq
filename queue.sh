@@ -1,24 +1,16 @@
 #!/bin/bash
 
-# Required file
-INCLUDE="/home/pavelpat/Projects/yastq/common.sh"
+# Include config file
+if [[ -e ~/.yastq.conf ]]; then source ~/.yastq.conf
+elif [[ -e /etc/yastq.conf ]]; then source /etc/yastq.conf
+else echo "Config file not found"; exit 1; fi
 
-# Include required file
-if [[ -e $INCLUDE ]]; then 
-	source $INCLUDE
-else 
-	echo "Please set correct $INCLUDE path"
-	exit 1
-fi
+# Include common code
+source $SCRIPT_DIR/common.sh
 
-# On USR1 selecting mode sending empty lines
-trap 'set_mode_empty_lines' 10
-
-# On USR2 selecting mode sending tasks
-trap 'set_mode_tasks' 12
-
-# ON TERM exiting
-trap 'stop_queue' 15
+function log_queue() {
+	echo "(queue) $1" | $TS >> $LOG_QUEUE
+}
 
 function set_mode_tasks() {
 	log_queue "Entering mode sending tasks"
@@ -34,6 +26,15 @@ function stop_queue() {
 	log_queue "Stopping task queue"
 	exit
 }
+
+# On USR1 selecting mode sending empty lines
+trap 'set_mode_empty_lines' 10
+
+# On USR2 selecting mode sending tasks
+trap 'set_mode_tasks' 12
+
+# ON TERM exiting
+trap 'stop_queue' 15
 
 # Whet it sets to 1 script sends empty lines to pipe
 SEND_EMPTY_LINES=0

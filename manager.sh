@@ -1,15 +1,17 @@
 #!/bin/bash
 
-# Required file
-INCLUDE="/home/pavelpat/Projects/yastq/common.sh"
+# Include config file
+if [[ -e ~/.yastq.conf ]]; then source ~/.yastq.conf
+elif [[ -e /etc/yastq.conf ]]; then source /etc/yastq.conf
+else echo "Config file not found"; exit 1; fi
 
-# Include required file
-if [[ -e $INCLUDE ]]; then 
-	source $INCLUDE
-else 
-	echo "Please set correct $INCLUDE path"
-	exit 1
-fi
+# Include common code
+source $SCRIPT_DIR/common.sh
+
+function log_manager() {
+	echo "(manager) $1" | $TS
+	echo "(manager) $1" | $TS >> $LOG_MANAGER
+}
 
 function show_status() {
 	echo "Delayed $($WC -l $QUEUE_DELAYED_FILE | $CUT -f 1 -d " ") tasks"
@@ -25,9 +27,8 @@ function start_workers() {
 	if ! [[ -e $WORKERS_PIDS_FILE ]]; then
 		log_manager "Starting sheduler workers"
 		echo -n "" > $WORKERS_PIDS_FILE
-		for (( i=1; i<=$MAX_PARALLEL_SHEDULES; i++ ))
-		do
-			eval "worker.sh &"
+		for (( i=1; i<=$MAX_PARALLEL_SHEDULES; i++ )); do
+			eval "$SCRIPT_WORKER &"
 			echo -n "$! " >> $WORKERS_PIDS_FILE
 			log_manager "Started worker $!"
 		done
@@ -60,7 +61,7 @@ function wait_workers() {
 }
 
 function start_tasks_queue() {
-	eval "queue.sh &"
+	eval "$SCRIPT_QUEUE &"
 	echo -n "$! " >> $TASKS_QUEUE_PID_FILE
 
 	if [[ -e $TASKS_QUEUE_PID_FILE ]]; then

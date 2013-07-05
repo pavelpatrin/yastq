@@ -1,21 +1,22 @@
 #!/bin/bash
 
-# Required file
-INCLUDE="/home/pavelpat/Projects/yastq/common.sh"
+# Include config file
+if [[ -e ~/.yastq.conf ]]; then source ~/.yastq.conf
+elif [[ -e /etc/yastq.conf ]]; then source /etc/yastq.conf
+else echo "Config file not found"; exit 1; fi
 
-# Include required file
-if [[ -e $INCLUDE ]]; then 
-	source $INCLUDE
-else 
-	echo "Please set correct $INCLUDE path"
-	exit 1
-fi
+# Include common code
+source $SCRIPT_DIR/common.sh
+
+function log_worker() {
+	echo "(worker $$) $1" | $TS >> $LOG_WORKER
+}
 
 # Handle TERM signal for permit next iteration
 trap 'CONTINUE=0' 15
 
 # Log about starting
-log_worker "$$ Worker starting"
+log_worker "Worker starting"
 
 # Continue next task after
 CONTINUE=1;
@@ -28,7 +29,7 @@ do
 
 	if [[ -n "$TASK" ]]; then
 		# Log task start
-		log_worker "$$ Running task $TASK"
+		log_worker "Running task $TASK"
 
 		# Run task
 		eval "$TASK &"; wait; 
@@ -43,11 +44,11 @@ do
 		fi
 
 		# Log task end
-		log_worker "$$ Running task finished with code $CODE"
+		log_worker "Running task finished with code $CODE"
 	else
 		# Task is empty. Sleep
 		sleep 1
 	fi
 done
 
-log_worker "$$ Worker exiting"
+log_worker "Worker exiting"
