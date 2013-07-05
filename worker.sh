@@ -28,6 +28,9 @@ CONTINUE=1
 # Tasks loop
 while [[ $CONTINUE -eq 1 ]]
 do
+	# Clear previous task
+	TASK=""
+
 	# Read next task
 	read TASK < $TASKS_QUEUE_PIPE 2>/dev/null
 
