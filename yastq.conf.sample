@@ -1,0 +1,8 @@
+##
+## Yastq script configuration file
+##
+
+# Script directory
+SCRIPT_DIR="/home/pavelpat/Projects/yastq"
+SCRIPT_WORKER=$SCRIPT_DIR/worker.sh
+SCRIPT_QUEUE=$SCRIPT_DIR/queue.sh
