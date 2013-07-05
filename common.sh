@@ -39,7 +39,8 @@ MKFIFO=mkfifo
 
 # Logs
 LOG_WORKER=log/worker.log
-LOG_MASTER=log/master.log
+LOG_MANAGER=log/manager.log
+LOG_QUEUE=log/queue.log
 
 # Create queue files
 if ! [[ -e $QUEUE_DELAYED_FILE ]]; then
@@ -53,11 +54,14 @@ if ! [[ -e $QUEUE_FAILED_FILE ]]; then
 fi
 
 # Create log files
-if ! [[ -e $LOG_MASTER ]]; then
-	$TOUCH $LOG_MASTER
+if ! [[ -e $LOG_MANAGER ]]; then
+	$TOUCH $LOG_MANAGER
 fi
 if ! [[ -e $LOG_WORKER ]]; then
 	$TOUCH $LOG_WORKER
+fi
+if ! [[ -e $LOG_QUEUE ]]; then
+	$TOUCH $LOG_QUEUE
 fi
 
 # Create queueFIFO
@@ -65,11 +69,15 @@ if ! [[ -e $TASKS_QUEUE_PIPE ]]; then
 	$MKFIFO $TASKS_QUEUE_PIPE
 fi
 
-function log_master() {
-	echo "$1" | $TS
-	echo "$1" | $TS >> $LOG_MASTER
+function log_manager() {
+	echo "(manager) $1" | $TS
+	echo "(manager) $1" | $TS >> $LOG_MANAGER
+}
+
+function log_queue() {
+	echo "(queue) $1" | $TS >> $LOG_QUEUE
 }
 
 function log_worker() {
-	echo "$1" | $TS >> $LOG_WORKER
+	echo "(worker) $1" | $TS >> $LOG_WORKER
 }

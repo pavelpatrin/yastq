@@ -14,10 +14,10 @@ CONTINUE=1;
 # Tasks loop
 while [[ $CONTINUE -eq 1 ]]
 do
-	if [[ -e $TASKS_QUEUE_PIPE ]]; then
-		# Read next task
-		TASK=$($CAT $TASKS_QUEUE_PIPE)
+	# Read next task
+	TASK=$($CAT $TASKS_QUEUE_PIPE 2>/dev/null)
 
+	if [[ -n "$TASK" ]]; then
 		# Log task start
 		log_worker "$$ Running task $TASK"
 
@@ -27,16 +27,16 @@ do
 		
 		if [[ $CODE -eq 0 ]]; then
 			# Put it into completes file
-			echo "$TASK" >> $QUEUE_COMPLETE_FILE
+			echo "$TASK" | $TS >> $QUEUE_COMPLETE_FILE
 		else 
 			# Put it into errors file
-			echo "$TASK" >> $QUEUE_FAILED_FILE
+			echo "$TASK" | $TS >> $QUEUE_FAILED_FILE
 		fi
 
 		# Log task end
 		log_worker "$$ Running task finished with code $CODE"
 	else
-		# Pipe is not exists. Sleep
+		# Task is empty. Sleep
 		sleep 1
 	fi
 done

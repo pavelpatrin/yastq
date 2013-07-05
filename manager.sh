@@ -9,18 +9,33 @@ function show_status() {
 	echo "Failed $($WC -l $QUEUE_FAILED_FILE | $CUT -f 1 -d " ") tasks"
 }
 
+function start_workers() {
+	if ! [[ -e $WORKERS_PIDS_FILE ]]; then
+		log_manager "Starting sheduler workers ($MAX_PARALLEL_SHEDULES)"
+		echo -n "" > $WORKERS_PIDS_FILE
+		for (( i=1; i<=$MAX_PARALLEL_SHEDULES; i++ ))
+		do
+			eval "worker.sh &"
+			echo -n "$! " >> $WORKERS_PIDS_FILE
+			log_manager "Started worker $!"
+		done
+	else
+		log_manager "Sheduler is already running"
+	fi
+}
+
 function stop_workers() {
 	if [[ -e $WORKERS_PIDS_FILE ]]; then
-		log_master "Sending stop signal to workers"
+		log_manager "Sending stop signal to workers"
 		$KILL -15 $($CAT $WORKERS_PIDS_FILE)
 
-		log_master "Waiting for workers"
+		log_manager "Waiting for workers"
 		wait_workers
 		
-		log_master "All workers done"
+		log_manager "All workers done"
 		$RM -f $WORKERS_PIDS_FILE
 	else
-		log_master "Sheduler is not running"
+		log_manager "Sheduler is not running"
 	fi
 }
 
@@ -32,40 +47,34 @@ function wait_workers() {
 	done
 }
 
-function start_workers() {
-	if ! [[ -e $WORKERS_PIDS_FILE ]]; then
-		log_master "Starting sheduler workers ($MAX_PARALLEL_SHEDULES)"
-		echo -n "" > $WORKERS_PIDS_FILE
-		for (( i=1; i<=$MAX_PARALLEL_SHEDULES; i++ ))
-		do
-			eval "worker.sh &"
-			echo -n "$! " >> $WORKERS_PIDS_FILE
-			log_master "Started worker $!"
-		done
-	else
-		log_master "Sheduler is already running"
-	fi
-}
-
 function start_tasks_queue() {
 	eval "queue.sh &"
 	echo -n "$! " >> $TASKS_QUEUE_PID_FILE
 
 	if [[ -e $TASKS_QUEUE_PID_FILE ]]; then
-		log_master "Starting tasks queue"
+		log_manager "Starting tasks queue"
 		echo -n "$!" > $TASKS_QUEUE_PID_FILE
 	else
-		log_master "Tasks queue is already running"
+		log_manager "Tasks queue is already running"
 	fi
 }
 
 function stop_tasks_queue() {
 	if [[ -e $TASKS_QUEUE_PID_FILE ]]; then
-		log_master "Sending kill signal to tasks queue"
+		log_manager "Sending kill signal to tasks queue"
 		$KILL -9 $($CAT $TASKS_QUEUE_PID_FILE)
 		$RM -f $TASKS_QUEUE_PID_FILE
 	else
-		log_master "Tasks queue is not running"
+		log_manager "Tasks queue is not running"
+	fi
+}
+
+function free_tasks_queue() {
+	if [[ -e $TASKS_QUEUE_PID_FILE ]]; then
+		log_manager "Sending USR1 signal to tasks queue"
+		$KILL -10 $($CAT $TASKS_QUEUE_PID_FILE)
+	else
+		log_manager "Tasks queue is not running"
 	fi
 }
 
@@ -80,6 +89,7 @@ case $1 in
 		start_tasks_queue
 		;;
 	"stop")
+		free_tasks_queue
 		stop_workers
 		stop_tasks_queue
 		;;
@@ -90,6 +100,6 @@ case $1 in
 		append_queue
 		;;
 	*)
-		echo "Usage: master.sh start|stop|status|add-task"
+		echo "Usage: manager.sh start|stop|status|add-task"
 		;;
 esac
