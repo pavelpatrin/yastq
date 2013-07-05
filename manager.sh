@@ -14,6 +14,7 @@ function log_manager() {
 }
 
 function show_status() {
+	echo "Running $($WC -l $WORKERS_PIDS_FILE | $CUT -f 1 -d " ") workers"
 	echo "Delayed $($WC -l $QUEUE_DELAYED_FILE | $CUT -f 1 -d " ") tasks"
 	echo "Complete $($WC -l $QUEUE_COMPLETE_FILE | $CUT -f 1 -d " ") tasks"
 	echo "Failed $($WC -l $QUEUE_FAILED_FILE | $CUT -f 1 -d " ") tasks"
