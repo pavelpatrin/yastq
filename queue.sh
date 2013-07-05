@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Required file
-INCLUDE="/home/pavelpat/Sheduler/common.sh"
+INCLUDE="/home/pavelpat/Projects/yastq/common.sh"
 
 # Include required file
 if [[ -e $INCLUDE ]]; then 

@@ -3,9 +3,6 @@
 # Correct $PATH
 PATH=$PATH:`dirname $0`
 
-# Max of parallels tasks
-MAX_PARALLEL_SHEDULES=5
-
 # File with queue
 QUEUE_DELAYED_FILE=db/delayed
 

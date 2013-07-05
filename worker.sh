@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Required file
-INCLUDE="/home/pavelpat/Sheduler/common.sh"
+INCLUDE="/home/pavelpat/Projects/yastq/common.sh"
 
 # Include required file
 if [[ -e $INCLUDE ]]; then 
@@ -14,6 +14,7 @@ fi
 # Handle TERM signal for permit next iteration
 trap 'CONTINUE=0' 15
 
+# Log about starting
 log_worker "$$ Worker starting"
 
 # Continue next task after

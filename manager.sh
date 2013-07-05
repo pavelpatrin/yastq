@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Required file
-INCLUDE="/home/pavelpat/Sheduler/common.sh"
+INCLUDE="/home/pavelpat/Projects/yastq/common.sh"
 
 # Include required file
 if [[ -e $INCLUDE ]]; then 
@@ -18,8 +18,12 @@ function show_status() {
 }
 
 function start_workers() {
+	# Max of parallels tasks (detected by count cpu cores)
+	local MAX_PARALLEL_SHEDULES=$($GREP processor /proc/cpuinfo | $WC -l)
+	log_manager "Detected $MAX_PARALLEL_SHEDULES CPU cores"
+
 	if ! [[ -e $WORKERS_PIDS_FILE ]]; then
-		log_manager "Starting sheduler workers ($MAX_PARALLEL_SHEDULES)"
+		log_manager "Starting sheduler workers"
 		echo -n "" > $WORKERS_PIDS_FILE
 		for (( i=1; i<=$MAX_PARALLEL_SHEDULES; i++ ))
 		do
