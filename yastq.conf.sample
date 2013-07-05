@@ -3,6 +3,17 @@
 ##
 
 # Script directory
+# SCRIPT_DIR=/absolute/path/to/script/directory
 SCRIPT_DIR="/home/pavelpat/Projects/yastq"
+
+# Worker script
+# SCRIPT_WORKER=/absolute/path/to/script/directory/worker.sh
 SCRIPT_WORKER=$SCRIPT_DIR/worker.sh
+
+# Tasks queue script
+# SCRIPT_TASKS_QUEUE=/absolute/path/to/script/directory/queue.sh
 SCRIPT_TASKS_QUEUE=$SCRIPT_DIR/queue.sh
+
+# Max of parallels tasks (detected by count cpu cores)
+# MAX_PARALLEL_SHEDULES=N
+MAX_PARALLEL_SHEDULES=$(fgrep -c processor /proc/cpuinfo)

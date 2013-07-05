@@ -17,7 +17,7 @@ function prevent_next_iteration() {
 }
 
 # Handle TERM signal for permit next iteration
-trap 'prevent_next_iteration' 15
+trap 'prevent_next_iteration' TERM
 
 # Log about starting
 log_worker "Worker starting"

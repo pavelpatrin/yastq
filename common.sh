@@ -5,33 +5,39 @@ if [[ -e ~/.yastq.conf ]]; then source ~/.yastq.conf
 elif [[ -e /etc/yastq.conf ]]; then source /etc/yastq.conf
 else echo "Config file not found"; exit 1; fi
 
+# Check configuration options
+if ! [[ -d $SCRIPT_DIR ]]; then echo "Error: SCRIPT_DIR is not setted propertly in configuration file."; exit 1; fi
+if ! [[ -e $SCRIPT_WORKER ]]; then echo "Error: SCRIPT_WORKER is not setted propertly in configuration file."; exit 1; fi
+if ! [[ -e $SCRIPT_TASKS_QUEUE ]]; then echo "Error: SCRIPT_TASKS_QUEUE is not setted propertly in configuration file."; exit 1; fi
+if ! [[ -n $MAX_PARALLEL_SHEDULES ]]; then echo "Error: MAX_PARALLEL_SHEDULES is not setted propertly in configuration file."; exit 1; fi
+
 # Get and check utilities paths
 WC=`which wc`
-if ! [[ -e $WC ]]; then echo "wc is not found"; exit 1; fi
+if ! [[ -e $WC ]]; then echo "Error: wc is not found"; exit 1; fi
 TS=`which ts`
-if ! [[ -e $TS ]]; then echo "ts is not found"; exit 1; fi
+if ! [[ -e $TS ]]; then echo "Error: ts is not found"; exit 1; fi
 PS=`which ps`
-if ! [[ -e $PS ]]; then echo "ps is not found"; exit 1; fi
+if ! [[ -e $PS ]]; then echo "Error: ps is not found"; exit 1; fi
 RM=`which rm`
-if ! [[ -e $RM ]]; then echo "rm is not found"; exit 1; fi
+if ! [[ -e $RM ]]; then echo "Error: rm is not found"; exit 1; fi
 CAT=`which cat`
-if ! [[ -e $CAT ]]; then echo "cat is not found"; exit 1; fi
+if ! [[ -e $CAT ]]; then echo "Error: cat is not found"; exit 1; fi
 KILL=`which kill`
-if ! [[ -e $KILL ]]; then echo "kill is not found"; exit 1; fi
+if ! [[ -e $KILL ]]; then echo "Error: kill is not found"; exit 1; fi
 HEAD=`which head`
-if ! [[ -e $HEAD ]]; then echo "head is not found"; exit 1; fi
+if ! [[ -e $HEAD ]]; then echo "Error: head is not found"; exit 1; fi
 TAIL=`which tail`
-if ! [[ -e $TAIL ]]; then echo "tail is not found"; exit 1; fi
+if ! [[ -e $TAIL ]]; then echo "Error: tail is not found"; exit 1; fi
 GREP=`which grep`
-if ! [[ -e $GREP ]]; then echo "grep is not found"; exit 1; fi
+if ! [[ -e $GREP ]]; then echo "Error: grep is not found"; exit 1; fi
 TOUCH=`which touch`
-if ! [[ -e $TOUCH ]]; then echo "touch is not found"; exit 1; fi
+if ! [[ -e $TOUCH ]]; then echo "Error: touch is not found"; exit 1; fi
 NOHUP=`which nohup`
-if ! [[ -e $NOHUP ]]; then echo "nohup is not found"; exit 1; fi
+if ! [[ -e $NOHUP ]]; then echo "Error: nohup is not found"; exit 1; fi
 SPONGE=`which sponge`
-if ! [[ -e $SPONGE ]]; then echo "sponge is not found"; exit 1; fi
+if ! [[ -e $SPONGE ]]; then echo "Error: sponge is not found"; exit 1; fi
 MKFIFO=`which mkfifo`
-if ! [[ -e $MKFIFO ]]; then echo "mkfifo is not found"; exit 1; fi
+if ! [[ -e $MKFIFO ]]; then echo "Error: mkfifo is not found"; exit 1; fi
 
 # Workers pids file
 WORKERS_PIDS_FILE=$SCRIPT_DIR/pid/workers

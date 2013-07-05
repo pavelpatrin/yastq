@@ -18,10 +18,6 @@ function show_status() {
 }
 
 function start_workers() {
-	# Max of parallels tasks (detected by count cpu cores)
-	local MAX_PARALLEL_SHEDULES=$($GREP processor /proc/cpuinfo | $WC -l)
-	log_manager "Detected $MAX_PARALLEL_SHEDULES CPU cores"
-
 	if ! [[ -e $WORKERS_PIDS_FILE ]]
 	then
 		log_manager "Starting sheduler workers"
@@ -43,7 +39,7 @@ function stop_workers() {
 	if [[ -e $WORKERS_PIDS_FILE ]]
 	then
 		log_manager "Sending stop signal to workers"
-		$KILL -15 $($CAT $WORKERS_PIDS_FILE)
+		$KILL -TERM $($CAT $WORKERS_PIDS_FILE)
 
 		log_manager "Waiting for workers"
 		wait_workers
@@ -80,7 +76,7 @@ function stop_tasks_queue() {
 	if [[ -e $TASKS_QUEUE_PID_FILE ]]
 	then
 		log_manager "Sending kill signal to tasks queue"
-		$KILL -9 $($CAT $TASKS_QUEUE_PID_FILE)
+		$KILL -KILL $($CAT $TASKS_QUEUE_PID_FILE)
 		$RM -f $TASKS_QUEUE_PID_FILE
 	else
 		log_manager "Tasks queue is not running"
@@ -91,7 +87,7 @@ function free_tasks_queue() {
 	if [[ -e $TASKS_QUEUE_PID_FILE ]]
 	then
 		log_manager "Sending USR1 signal to tasks queue"
-		$KILL -10 $($CAT $TASKS_QUEUE_PID_FILE)
+		$KILL -USR1 $($CAT $TASKS_QUEUE_PID_FILE)
 	else
 		log_manager "Tasks queue is not running"
 	fi

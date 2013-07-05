@@ -28,13 +28,13 @@ function stop_queue() {
 }
 
 # On USR1 selecting mode sending empty lines
-trap 'set_mode_empty_lines' 10
+trap 'set_mode_empty_lines' USR1
 
 # On USR2 selecting mode sending tasks
-trap 'set_mode_tasks' 12
+trap 'set_mode_tasks' USR2
 
 # ON TERM exiting
-trap 'stop_queue' 15
+trap 'stop_queue' TERM
 
 # Whet it sets to 1 script sends empty lines to pipe
 SEND_EMPTY_LINES=0
@@ -63,6 +63,6 @@ while [[ 0 ]]; do
 		fi
 	else
 		# Send empty lines to pipe
-		echo "" > $QUEUE_TASKS_PIPE
+		echo > $QUEUE_TASKS_PIPE
 	fi
 done
