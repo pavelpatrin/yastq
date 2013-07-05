@@ -28,7 +28,6 @@ function start_workers() {
 		echo -n "" > $WORKERS_PIDS_FILE
 		for ((i=1; i<=$MAX_PARALLEL_SHEDULES; i++))
 		do
-			# Log about start
 			log_manager "Starting new worker"
 
 			# Run worker script with nohup
@@ -67,7 +66,6 @@ function wait_workers() {
 function start_tasks_queue() {
 	if ! [[ -e $TASKS_QUEUE_PID_FILE ]]
 	then
-		# Log about start
 		log_manager "Starting new tasks queue"
 
 		# Run tasks queue script with nohup

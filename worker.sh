@@ -12,8 +12,12 @@ function log_worker() {
 	echo "(worker $$) $1" | $TS >> $LOG_WORKER
 }
 
+function prevent_next_iteration() {
+	CONTINUE=0
+}
+
 # Handle TERM signal for permit next iteration
-trap 'CONTINUE=0' 15
+trap 'prevent_next_iteration' 15
 
 # Log about starting
 log_worker "Worker starting"
