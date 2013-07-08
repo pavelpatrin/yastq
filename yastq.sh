@@ -96,7 +96,7 @@ free_tasks_queue() {
 append_tasks_queue() {
 	log_manager "Adding task '$1' with success '$2' and fail '$3' to tasks queue"
 
-	echo $(echo $1 | $BASE64) $(echo $2 | $BASE64) $(echo $3 | $BASE64) >> $TASKS_QUEUE_FILE
+	echo $(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0) >> $TASKS_QUEUE_FILE
 }
 
 print_usage() {

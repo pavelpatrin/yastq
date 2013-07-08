@@ -46,6 +46,7 @@ do
 		log_worker "Running task: $TASK"
 
 		# Run task
+		log_worker "$TASK &"
 		eval "$TASK &"
 		wait $!
 		CODE=$?

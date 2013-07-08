@@ -10,3 +10,28 @@
 
 ## Use:
 1. ./yastq.sh and see usage
+
+## Examples:
+### Starting:
+1. ./yastq.sh start
+
+### Adding tasks:
+
+#### Simple adding of a new task
+1. ./yastq.sh add-task task "/bin/sleep 5s && /bin/echo Hello, $(id -un) | /usr/bin/write $(id -un)"
+
+#### Adding of a new task with status handlers
+1. ./yastq.sh add-task \
+	task "/bin/sleep 5s && /bin/echo Hello again, $(id -un) | /usr/bin/write $(id -un)" \
+	success "echo Ok > /tmp/queuetest" \
+	fail "echo Fail > /tmp/queuetest"
+2. ./yastq.sh add-task \
+	task "/bin/sleep 5s && /bin/echo Hello again, $(id -un) \!\!\! | /usr/bin/write $(id -un) && /bin/false" \
+	success "echo Ok > /tmp/queuetest" \
+	fail "echo Fail > /tmp/queuetest"
+
+### Checking status
+1. ./yastq.sh status
+
+### Stopping:
+1. ./yastq.sh stop
