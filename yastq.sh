@@ -67,7 +67,7 @@ function stop_workers() {
 function wait_workers() {
 	while [[ ${?} == 0 ]]
 	do
-	    sleep 1 
+	    $SLEEP 1s
 	    $PS --pid $($CAT $WORKERS_PIDS_FILE) 2>&1 > /dev/null
 	done
 }

@@ -43,6 +43,8 @@ TOUCH=`which touch`
 if ! [[ -e $TOUCH ]]; then echo "Error: touch is not found"; exit 1; fi
 NOHUP=`which nohup`
 if ! [[ -e $NOHUP ]]; then echo "Error: nohup is not found"; exit 1; fi
+SLEEP=`which sleep`
+if ! [[ -e $SLEEP ]]; then echo "Error: sleep is not found"; exit 1; fi
 MKFIFO=`which mkfifo`
 if ! [[ -e $MKFIFO ]]; then echo "Error: mkfifo is not found"; exit 1; fi
 

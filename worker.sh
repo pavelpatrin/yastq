@@ -61,7 +61,7 @@ do
 		log_worker "Running task finished with code $CODE: $TASK "
 	else
 		# Task is empty. Sleep
-		sleep 1
+		$SLEEP 1s
 	fi
 done
 

@@ -73,6 +73,9 @@ while [[ 0 ]]; do
 
 			# Remove task from tasks file
 			$SED -i 1d $TASKS_QUEUE_FILE
+		else
+			# Sleep if no task received
+			$SLEEP 1s
 		fi
 	else
 		# Send empty lines to pipe
