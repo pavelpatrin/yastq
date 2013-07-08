@@ -20,7 +20,7 @@ show_status() {
 start_workers() {
 	if ! [ -e "$WORKERS_PIDS_FILE" ]
 	then
-		log_manager "Starting sheduler workers"
+		log_manager "Starting new workers"
 		echo -n "" > $WORKERS_PIDS_FILE
 		for ((i=1; i<=$MAX_PARALLEL_SHEDULES; i++))
 		do
@@ -31,7 +31,7 @@ start_workers() {
 			echo -n "$! " >> $WORKERS_PIDS_FILE
 		done
 	else
-		log_manager "Sheduler is already running"
+		log_manager "Workers are already running"
 	fi
 }
 
@@ -47,7 +47,7 @@ stop_workers() {
 		log_manager "All workers done"
 		$RM -f $WORKERS_PIDS_FILE
 	else
-		log_manager "Sheduler is not running"
+		log_manager "Workers are not running"
 	fi
 }
 
