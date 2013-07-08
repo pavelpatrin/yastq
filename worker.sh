@@ -1,25 +1,12 @@
 #!/bin/bash
 
 # Include config file
-if [[ -e ~/.yastq.conf ]]
-then 
-	source ~/.yastq.conf
-elif [[ -e /etc/yastq.conf ]]
-then 
-	source /etc/yastq.conf
-else 
-	echo "Config file not found"
-	exit 1
-fi
+if [[ -r ~/.yastq.conf ]]; then source ~/.yastq.conf
+elif [[ -r /etc/yastq.conf ]]; then source /etc/yastq.conf
+else echo "Config file not found"; exit 1; fi
 
 # Check existance of common code
-if [[ -e $SCRIPT_COMMON ]]
-then
-	source $SCRIPT_COMMON
-else
-	echo "Common file not found"
-	exit 1
-fi
+if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
 
 function log_worker() {
 	echo "$($DATE +'%F %T') (worker $$) $1" >> $LOG_WORKER

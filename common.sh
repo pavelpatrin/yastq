@@ -1,16 +1,9 @@
 #!/bin/bash
 
 # Include config file
-if [[ -e ~/.yastq.conf ]]
-then 
-	source ~/.yastq.conf
-elif [[ -e /etc/yastq.conf ]]
-then 
-	source /etc/yastq.conf
-else 
-	echo "Config file not found"
-	exit 1
-fi
+if [[ -r ~/.yastq.conf ]]; then source ~/.yastq.conf
+elif [[ -r /etc/yastq.conf ]]; then source /etc/yastq.conf
+else echo "Config file not found"; exit 1; fi
 
 # Check configuration options
 if ! [[ -d $SCRIPT_DIR ]]; then echo "Error: SCRIPT_DIR is not setted propertly in configuration file."; exit 1; fi
