@@ -107,12 +107,21 @@ function free_tasks_queue() {
 }
 
 function append_tasks_queue() {
-	read TASK
-	log_manager "Adding task '$TASK' to tasks queue"
-	echo $TASK >> $TASKS_QUEUE_FILE
+	log_manager "Adding task '$1' with success '$2' and fail '$3' to tasks queue"
+
+	echo $(echo $1 | $BASE64) $(echo $2 | $BASE64) $(echo $3 | $BASE64) >> $TASKS_QUEUE_FILE
 }
 
-case $1 in 
+function print_usage() {
+	echo "Usage: yastq.sh start|stop|status|add-task"
+	echo "       yastq.sh add-task task TASK [success SUCCESS] [fail FAIL]"
+}
+
+# Currect action
+ACTION=$1
+shift
+
+case $ACTION in 
 	"start")
 		start_workers
 		start_tasks_queue
@@ -126,9 +135,41 @@ case $1 in
 		show_status
 		;;
 	"add-task")
-		append_tasks_queue
+		SUCCESS=$FALSE
+		FAIL=$FALSE
+
+		# Fill options
+		while [[ -n "$1" ]]
+		do
+			case $1 in 
+				"task")
+					TASK=$2
+					shift; shift
+					;;
+				"success")
+					SUCCESS=$2
+					shift; shift
+					;;
+				"fail")
+					FAIL=$2
+					shift; shift
+					;;
+				*)		
+					log_manager "Skipping invalid option $1"; 
+					shift
+					;;
+			esac
+		done
+
+		# Append task or show usage
+		if [[ -n "$TASK" ]]
+		then
+			append_tasks_queue "$TASK" "$SUCCESS" "$FAIL"
+		else
+			print_usage
+		fi
 		;;
 	*)
-		echo "Usage: manager.sh start|stop|status|add-task"
+		print_usage
 		;;
 esac

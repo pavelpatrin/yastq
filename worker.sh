@@ -39,26 +39,38 @@ log_worker "Starting worker"
 CONTINUE=1
 
 # Tasks loop
-while [[ $CONTINUE -eq 1 ]]
+while (( $CONTINUE == 1 ))
 do
 	# Clear previous task
-	TASK=""
+	TASK_INFO=
 
 	# Read next task
-	read TASK < $TASKS_QUEUE_PIPE 2>/dev/null
+	read -a TASK_INFO < $TASKS_QUEUE_PIPE 2>/dev/null
 
-	if [[ -n "$TASK" ]]
+	# If it is array that contains elements
+	if [[ -n $TASK_INFO ]]
 	then
+		# Save aplitted into variables
+		TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
+		SUCCESS=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
+		FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
+
 		# Log task start
 		log_worker "Running task: $TASK"
 
 		# Run task
-		eval "$TASK 2>&1 >/dev/null &"
+		eval "$TASK &"
 		wait $!
 		CODE=$?
 
-		# Log task end
-		log_worker "Running task finished with code $CODE: $TASK "
+		if [[ $CODE -eq 0 ]]
+		then 
+			log_worker "Running task finished with code $CODE: $TASK. Executing SUCCESS command: $SUCCESS"
+			eval "$SUCCESS"
+		else 
+			log_worker "Running task finished with code $CODE: $TASK. Executing FAIL command: $FAIL"
+			eval "$FAIL"
+		fi
 	else
 		# Task is empty. Sleep
 		$SLEEP 1s

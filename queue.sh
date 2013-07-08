@@ -57,7 +57,7 @@ log_queue "Starting task queue"
 
 # Infinitie loop
 while [[ 0 ]]; do
-	if ! [[ $SEND_EMPTY_LINES -eq 1 ]]
+	if [[ $SEND_EMPTY_LINES -ne 1 ]]
 	then
 		# Read new task
 		TASK=$($HEAD -n 1 $TASKS_QUEUE_FILE)
@@ -66,7 +66,7 @@ while [[ 0 ]]; do
 		if [[ -n $TASK ]]
 		then
 			# Log action 
-			log_queue "Sending task '$TASK' to pipe"
+			log_queue "Sending base64 task '$TASK' to pipe"
 
 			# Send new task to pipe
 			echo $TASK > $TASKS_QUEUE_PIPE

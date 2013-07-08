@@ -45,6 +45,10 @@ NOHUP=`which nohup`
 if ! [[ -e $NOHUP ]]; then echo "Error: nohup is not found"; exit 1; fi
 SLEEP=`which sleep`
 if ! [[ -e $SLEEP ]]; then echo "Error: sleep is not found"; exit 1; fi
+FALSE=`which false`
+if ! [[ -e $FALSE ]]; then echo "Error: false is not found"; exit 1; fi
+BASE64=`which base64`
+if ! [[ -e $BASE64 ]]; then echo "Error: base64 is not found"; exit 1; fi
 MKFIFO=`which mkfifo`
 if ! [[ -e $MKFIFO ]]; then echo "Error: mkfifo is not found"; exit 1; fi
 
