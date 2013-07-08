@@ -33,7 +33,7 @@ function prevent_next_iteration() {
 trap 'prevent_next_iteration' TERM
 
 # Log about starting
-log_worker "Worker starting"
+log_worker "Starting worker"
 
 # Continue next task after
 CONTINUE=1
