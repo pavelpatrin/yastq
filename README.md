@@ -5,4 +5,4 @@
 2. copy yastq.conf.sample to ~/.yastq.conf or to /etc/yastq.conf
 
 ## Use:
-1. cd yastq && ./manager.sh	
+1. ./yastq.sh
