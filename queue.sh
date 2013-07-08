@@ -36,7 +36,7 @@ function set_mode_empty_lines() {
 }
 
 function stop_queue() {
-	log_queue "Stopping task queue"
+	log_queue "Stopping tasks queue"
 	exit
 }
 
