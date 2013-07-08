@@ -7,17 +7,17 @@ else echo "Config file not found"; exit 1; fi
 
 # Check existance of common code
 if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
-	
-function log_manager() {
+
+log_manager() {
 	echo "$($DATE +'%F %T') (manager) $1"
 	echo "$($DATE +'%F %T') (manager) $1" >> $LOG_MANAGER
 }
 
-function show_status() {
+show_status() {
 	echo "Running $($CAT $WORKERS_PIDS_FILE 2>/dev/null | $WC -w) workers"
 }
 
-function start_workers() {
+start_workers() {
 	if ! [[ -e $WORKERS_PIDS_FILE ]]
 	then
 		log_manager "Starting sheduler workers"
@@ -35,7 +35,7 @@ function start_workers() {
 	fi
 }
 
-function stop_workers() {
+stop_workers() {
 	if [[ -e $WORKERS_PIDS_FILE ]]
 	then
 		log_manager "Sending TERM signal to workers"
@@ -51,7 +51,7 @@ function stop_workers() {
 	fi
 }
 
-function wait_workers() {
+wait_workers() {
 	while [[ ${?} == 0 ]]
 	do
 	    $SLEEP 1s
@@ -59,7 +59,7 @@ function wait_workers() {
 	done
 }
 
-function start_tasks_queue() {
+start_tasks_queue() {
 	if ! [[ -e $TASKS_QUEUE_PID_FILE ]]
 	then
 		log_manager "Starting new tasks queue"
@@ -72,7 +72,7 @@ function start_tasks_queue() {
 	fi
 }
 
-function stop_tasks_queue() {
+stop_tasks_queue() {
 	if [[ -e $TASKS_QUEUE_PID_FILE ]]
 	then
 		log_manager "Sending kill signal to tasks queue"
@@ -83,7 +83,7 @@ function stop_tasks_queue() {
 	fi
 }
 
-function free_tasks_queue() {
+free_tasks_queue() {
 	if [[ -e $TASKS_QUEUE_PID_FILE ]]
 	then
 		log_manager "Sending USR1 signal to tasks queue"
@@ -93,13 +93,13 @@ function free_tasks_queue() {
 	fi
 }
 
-function append_tasks_queue() {
+append_tasks_queue() {
 	log_manager "Adding task '$1' with success '$2' and fail '$3' to tasks queue"
 
 	echo $(echo $1 | $BASE64) $(echo $2 | $BASE64) $(echo $3 | $BASE64) >> $TASKS_QUEUE_FILE
 }
 
-function print_usage() {
+print_usage() {
 	echo "Usage: yastq.sh start|stop|status|add-task"
 	echo "       yastq.sh add-task task TASK [success SUCCESS] [fail FAIL]"
 }

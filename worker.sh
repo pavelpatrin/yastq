@@ -8,11 +8,11 @@ else echo "Config file not found"; exit 1; fi
 # Check existance of common code
 if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
 
-function log_worker() {
+log_worker() {
 	echo "$($DATE +'%F %T') (worker $$) $1" >> $LOG_WORKER
 }
 
-function prevent_next_iteration() {
+prevent_next_iteration() {
 	CONTINUE=0
 }
 

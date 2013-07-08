@@ -7,22 +7,22 @@ else echo "Config file not found"; exit 1; fi
 
 # Check existance of common code
 if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
-	
-function log_queue() {
+
+log_queue() {
 	echo "$($DATE +'%F %T') (queue) $1" >> $LOG_QUEUE
 }
 
-function set_mode_tasks() {
+set_mode_tasks() {
 	log_queue "Entering mode sending tasks"
 	SEND_EMPTY_LINES=0
 }
 
-function set_mode_empty_lines() {
+set_mode_empty_lines() {
 	log_queue "Entering mode sending empty lines"
 	SEND_EMPTY_LINES=1
 }
 
-function stop_queue() {
+stop_queue() {
 	log_queue "Stopping tasks queue"
 	exit
 }
