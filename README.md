@@ -25,10 +25,16 @@ task "/bin/sleep 5s && /bin/echo Hello, $(id -un) | /usr/bin/write $(id -un)"
 ```
 #### Adding of a new task with status handlers
 ```bash
-./yastq.sh add-task task "/bin/sleep 5s && /bin/echo Hello again, $(id -un) | /usr/bin/write $(id -un)" success "echo Ok > /tmp/queuetest" fail "echo Fail > /tmp/queuetest"
+./yastq.sh add-task \
+task "/bin/sleep 5s && /bin/echo Hello again, $(id -un) | /usr/bin/write $(id -un)" \
+success "echo Ok > /tmp/queuetest" \
+fail "echo Fail > /tmp/queuetest"
 ```
 ```bash
-./yastq.sh add-task task "/bin/sleep 5s && /bin/echo Hello again, $(id -un) \!\!\! | /usr/bin/write $(id -un) && /bin/false" success "echo Ok > /tmp/queuetest" fail "echo Fail > /tmp/queuetest"
+./yastq.sh add-task \
+task "/bin/sleep 5s && /bin/echo Hello again, $(id -un) \!\!\! | /usr/bin/write $(id -un) && /bin/false" \
+success "echo Ok > /tmp/queuetest" \
+fail "echo Fail > /tmp/queuetest"
 ```
 ### Checking status
 ```bash
