@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Include config file
-if [[ -r ~/.yastq.conf ]]; then source ~/.yastq.conf
-elif [[ -r /etc/yastq.conf ]]; then source /etc/yastq.conf
+if [ -r ~/.yastq.conf ]; then source ~/.yastq.conf
+elif [ -r /etc/yastq.conf ]; then source /etc/yastq.conf
 else echo "Config file not found"; exit 1; fi
 
 # Check existance of common code
@@ -43,14 +43,15 @@ SEND_EMPTY_LINES=0
 log_queue "Starting task queue"
 
 # Infinitie loop
-while [[ 0 ]]; do
-	if [[ $SEND_EMPTY_LINES -ne 1 ]]
+while [ 0 ]
+do
+	if [ 1 != "$SEND_EMPTY_LINES" ]
 	then
 		# Read new task
 		TASK=$($HEAD -n 1 $TASKS_QUEUE_FILE)
 
 		# If task is not empty
-		if [[ -n $TASK ]]
+		if [ -n "$TASK" ]
 		then
 			# Log action 
 			log_queue "Sending base64 task '$TASK' to pipe"

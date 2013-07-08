@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Include config file
-if [[ -r ~/.yastq.conf ]]; then source ~/.yastq.conf
-elif [[ -r /etc/yastq.conf ]]; then source /etc/yastq.conf
+if [ -r ~/.yastq.conf ]; then source ~/.yastq.conf
+elif [ -r /etc/yastq.conf ]; then source /etc/yastq.conf
 else echo "Config file not found"; exit 1; fi
 
 # Check existance of common code
@@ -26,7 +26,7 @@ log_worker "Starting worker"
 CONTINUE=1
 
 # Tasks loop
-while (( $CONTINUE == 1 ))
+while [ 1 = "$CONTINUE" ]
 do
 	# Clear previous task
 	TASK_INFO=
@@ -35,7 +35,7 @@ do
 	read -a TASK_INFO < $TASKS_QUEUE_PIPE 2>/dev/null
 
 	# If it is array that contains elements
-	if [[ -n $TASK_INFO ]]
+	if [ -n "$TASK_INFO" ]
 	then
 		# Save aplitted into variables
 		TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
@@ -50,7 +50,7 @@ do
 		wait $!
 		CODE=$?
 
-		if [[ $CODE -eq 0 ]]
+		if [ 0 = "$CODE" ]
 		then 
 			log_worker "Running task finished with code $CODE: $TASK. Executing SUCCESS command: $SUCCESS"
 			eval "$SUCCESS"

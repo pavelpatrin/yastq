@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Include config file
-if [[ -r ~/.yastq.conf ]]; then source ~/.yastq.conf
-elif [[ -r /etc/yastq.conf ]]; then source /etc/yastq.conf
+if [ -r ~/.yastq.conf ]; then source ~/.yastq.conf
+elif [ -r /etc/yastq.conf ]; then source /etc/yastq.conf
 else echo "Config file not found"; exit 1; fi
 
 # Check existance of common code
@@ -18,7 +18,7 @@ show_status() {
 }
 
 start_workers() {
-	if ! [[ -e $WORKERS_PIDS_FILE ]]
+	if ! [ -e "$WORKERS_PIDS_FILE" ]
 	then
 		log_manager "Starting sheduler workers"
 		echo -n "" > $WORKERS_PIDS_FILE
@@ -36,7 +36,7 @@ start_workers() {
 }
 
 stop_workers() {
-	if [[ -e $WORKERS_PIDS_FILE ]]
+	if [ -e "$WORKERS_PIDS_FILE" ]
 	then
 		log_manager "Sending TERM signal to workers"
 		$KILL -TERM $($CAT $WORKERS_PIDS_FILE)
@@ -52,7 +52,7 @@ stop_workers() {
 }
 
 wait_workers() {
-	while [[ ${?} == 0 ]]
+	while [ "${?}" = 0 ]
 	do
 	    $SLEEP 1s
 	    $PS --pid $($CAT $WORKERS_PIDS_FILE) 2>&1 > /dev/null
@@ -60,7 +60,7 @@ wait_workers() {
 }
 
 start_tasks_queue() {
-	if ! [[ -e $TASKS_QUEUE_PID_FILE ]]
+	if ! [ -e "$TASKS_QUEUE_PID_FILE" ]
 	then
 		log_manager "Starting new tasks queue"
 
@@ -73,7 +73,7 @@ start_tasks_queue() {
 }
 
 stop_tasks_queue() {
-	if [[ -e $TASKS_QUEUE_PID_FILE ]]
+	if [ -e "$TASKS_QUEUE_PID_FILE" ]
 	then
 		log_manager "Sending kill signal to tasks queue"
 		$KILL -TERM $($CAT $TASKS_QUEUE_PID_FILE)
@@ -84,7 +84,7 @@ stop_tasks_queue() {
 }
 
 free_tasks_queue() {
-	if [[ -e $TASKS_QUEUE_PID_FILE ]]
+	if [ -e "$TASKS_QUEUE_PID_FILE" ]
 	then
 		log_manager "Sending USR1 signal to tasks queue"
 		$KILL -USR1 $($CAT $TASKS_QUEUE_PID_FILE)
@@ -126,7 +126,7 @@ case $ACTION in
 		FAIL=$FALSE
 
 		# Fill options
-		while [[ -n "$1" ]]
+		while [ -n "$1" ]
 		do
 			case $1 in 
 				"task")
@@ -149,7 +149,7 @@ case $ACTION in
 		done
 
 		# Append task or show usage
-		if [[ -n "$TASK" ]]
+		if [ -n "$TASK" ]
 		then
 			append_tasks_queue "$TASK" "$SUCCESS" "$FAIL"
 		else
