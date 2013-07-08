@@ -89,7 +89,7 @@ function stop_tasks_queue() {
 	if [[ -e $TASKS_QUEUE_PID_FILE ]]
 	then
 		log_manager "Sending kill signal to tasks queue"
-		$KILL -KILL $($CAT $TASKS_QUEUE_PID_FILE)
+		$KILL -TERM $($CAT $TASKS_QUEUE_PID_FILE)
 		$RM -f $TASKS_QUEUE_PID_FILE
 	else
 		log_manager "Tasks queue is not running"
