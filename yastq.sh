@@ -107,14 +107,9 @@ function free_tasks_queue() {
 }
 
 function append_tasks_queue() {
-	if [[ -w $TASKS_QUEUE_FILE ]]
-	then
-	    read TASK
-	    log_manager "Adding task '$TASK' to tasks queue"
-	    echo $TASK >> $TASKS_QUEUE_FILE
-	else
-	    log_manager "Could not add new tasks because $TASKS_QUEUE_FILE is not writable"
-	fi
+	read TASK
+	log_manager "Adding task '$TASK' to tasks queue"
+	echo $TASK >> $TASKS_QUEUE_FILE
 }
 
 case $1 in 
