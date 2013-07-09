@@ -12,37 +12,37 @@ if ! [ -x "$SCRIPT_TASKS_QUEUE" ]; then echo "Error: SCRIPT_TASKS_QUEUE is not s
 if ! [ -n "$MAX_PARALLEL_SHEDULES" ]; then echo "Error: MAX_PARALLEL_SHEDULES is not setted propertly in configuration file."; exit 1; fi
 
 # Get and check utilities paths
-WC=`which wc`
+WC=`type -P wc`
 if ! [ -x "$WC" ]; then echo "Error: wc is not found"; exit 1; fi
-PS=`which ps`
+PS=`type -P ps`
 if ! [ -x "$PS" ]; then echo "Error: ps is not found"; exit 1; fi
-RM=`which rm`
+RM=`type -P rm`
 if ! [ -x "$RM" ]; then echo "Error: rm is not found"; exit 1; fi
-CAT=`which cat`
+CAT=`type -P cat`
 if ! [ -x "$CAT" ]; then echo "Error: cat is not found"; exit 1; fi
-SED=`which sed`
+SED=`type -P sed`
 if ! [ -x "$SED" ]; then echo "Error: sed is not found"; exit 1; fi
-DATE=`which date`
+DATE=`type -P date`
 if ! [ -x "$DATE" ]; then echo "Error: date is not found"; exit 1; fi
-KILL=`which kill`
+KILL=`type -P kill`
 if ! [ -x "$KILL" ]; then echo "Error: kill is not found"; exit 1; fi
-HEAD=`which head`
+HEAD=`type -P head`
 if ! [ -x "$HEAD" ]; then echo "Error: head is not found"; exit 1; fi
-TAIL=`which tail`
+TAIL=`type -P tail`
 if ! [ -x "$TAIL" ]; then echo "Error: tail is not found"; exit 1; fi
-GREP=`which grep`
+GREP=`type -P grep`
 if ! [ -x "$GREP" ]; then echo "Error: grep is not found"; exit 1; fi
-TOUCH=`which touch`
+TOUCH=`type -P touch`
 if ! [ -x "$TOUCH" ]; then echo "Error: touch is not found"; exit 1; fi
-NOHUP=`which nohup`
+NOHUP=`type -P nohup`
 if ! [ -x "$NOHUP" ]; then echo "Error: nohup is not found"; exit 1; fi
-SLEEP=`which sleep`
+SLEEP=`type -P sleep`
 if ! [ -x "$SLEEP" ]; then echo "Error: sleep is not found"; exit 1; fi
-FALSE=`which false`
+FALSE=`type -P false`
 if ! [ -x "$FALSE" ]; then echo "Error: false is not found"; exit 1; fi
-BASE64=`which base64`
+BASE64=`type -P base64`
 if ! [ -x "$BASE64" ]; then echo "Error: base64 is not found"; exit 1; fi
-MKFIFO=`which mkfifo`
+MKFIFO=`type -P mkfifo`
 if ! [ -x "$MKFIFO" ]; then echo "Error: mkfifo is not found"; exit 1; fi
 
 # Workers pids file
