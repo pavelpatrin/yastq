@@ -38,13 +38,12 @@ do
 	if [ -n "$TASK_INFO" ]
 	then
 		# Save aplitted into variables
-		TASK_ID=${TASK_INFO[0]}
-		TASK=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
-		SUCC=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
-		FAIL=$(echo ${TASK_INFO[3]}| $BASE64 --decode)
+		TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
+		SUCCESS=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
+		FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
 
 		# Log task start
-		log_worker "Running task $TASK_ID: $TASK"
+		log_worker "Running task: $TASK"
 
 		# Run task
 		eval "$TASK &"
@@ -53,10 +52,10 @@ do
 
 		if [ 0 = "$CODE" ]
 		then 
-			log_worker "Running task $TASK_ID finished with code $CODE: $TASK. Executing SUCC command: $SUCC"
-			eval "$SUCC"
+			log_worker "Running task finished with code $CODE: $TASK. Executing SUCCESS command: $SUCCESS"
+			eval "$SUCCESS"
 		else 
-			log_worker "Running task $TASK_ID finished with code $CODE: $TASK. Executing FAIL command: $FAIL"
+			log_worker "Running task finished with code $CODE: $TASK. Executing FAIL command: $FAIL"
 			eval "$FAIL"
 		fi
 	else

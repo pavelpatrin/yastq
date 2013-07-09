@@ -94,24 +94,9 @@ free_tasks_queue() {
 }
 
 append_tasks_queue() {
-	local TASK=$1
-	local SUCC=$2
-	local FAIL=$3
+	log_manager "Adding task '$1' with success '$2' and fail '$3' to tasks queue"
 
-	log_manager "Adding task '$TASK' with success '$SUCC' and fail '$FAIL' to tasks queue"
-
-	local TASK_ID=$($DATE '+%s%N')
-	echo $TASK_ID $(echo $TASK | $BASE64 -w 0) $(echo $SUCC | $BASE64 -w 0) $(echo $FAIL | $BASE64 -w 0) >> $TASKS_QUEUE_FILE
-
-	log_manager "Added new task with ID $TASK_ID"
-}
-
-remove_task_from_queue() {
-	local TASK_ID=$1
-	log_manager "Removing task $TASK_ID"
-
-	# Remove task from queue
-	$SED -i '/^'$TASK_ID'\s/d' $TASKS_QUEUE_FILE 2>&1 > /dev/null
+	echo $(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0) >> $TASKS_QUEUE_FILE
 }
 
 print_usage() {
@@ -119,7 +104,7 @@ print_usage() {
 	echo "       yastq.sh add-task task TASK [success SUCCESS] [fail FAIL]"
 }
 
-# Current action
+# Currect action
 ACTION=$1
 shift
 
