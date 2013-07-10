@@ -71,9 +71,6 @@ log_manager "Manager started"
 # Start workers
 start_workers
 
-# Open descriptor to tasks file
-exec 3<>$MANAGER_TASKS_FILE
-
 # Infinitie loop
 while [ 0 ]
 do
@@ -81,7 +78,7 @@ do
 	unset -v TASK
 
 	# Read new task from tasks file descriptor
-	read -r -u 3 TASK
+	read -r TASK < $MANAGER_TASKS_FILE
 
 	# If task is not empty
 	if [ -n "$TASK" ]

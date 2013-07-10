@@ -29,7 +29,7 @@ CONTINUE=1
 while [ 1 = "$CONTINUE" ]
 do
 	# Clear previous task
-	unser -v TASK_INFO
+	unset -v TASK_INFO
 
 	# Read next task
 	read -a TASK_INFO < $MANAGER_TASKS_PIPE 2>/dev/null
@@ -39,7 +39,7 @@ do
 	then
 		# Save aplitted into variables
 		TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
-		SUCCESS=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
+		SUCC=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
 		FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
 
 		# Log task start
@@ -52,8 +52,8 @@ do
 
 		if [ 0 = "$CODE" ]
 		then 
-			log_worker "Running task finished with code $CODE: $TASK. Executing SUCCESS command: $SUCCESS"
-			eval "$SUCCESS"
+			log_worker "Running task finished with code $CODE: $TASK. Executing SUCC command: $SUCC"
+			eval "$SUCC"
 		else 
 			log_worker "Running task finished with code $CODE: $TASK. Executing FAIL command: $FAIL"
 			eval "$FAIL"
