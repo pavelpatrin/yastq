@@ -50,6 +50,9 @@ MANAGER_TASKS_FILE=$SCRIPT_DIR/db/tasks
 # Manager pipe to receive tasks
 MANAGER_TASKS_PIPE=$SCRIPT_DIR/pipe/tasks
 
+# Manager pipe to send status
+MANAGER_STATUS_PIPE=$SCRIPT_DIR/pipe/status
+
 # Manager pid file
 MANAGER_PID_FILE=$SCRIPT_DIR/pid/manager
 
@@ -61,6 +64,7 @@ LOG_WORKER=$SCRIPT_DIR/log/worker.log
 # Create manager files
 if ! [ -e "$MANAGER_TASKS_FILE" ]; then $TOUCH $MANAGER_TASKS_FILE; fi
 if ! [ -e "$MANAGER_TASKS_PIPE" ]; then $MKFIFO $MANAGER_TASKS_PIPE; fi
+if ! [ -e "$MANAGER_STATUS_PIPE" ]; then $MKFIFO $MANAGER_STATUS_PIPE; fi
 
 # Create log files
 if ! [ -e "$LOG_DASHBOARD" ]; then $TOUCH $LOG_DASHBOARD; fi

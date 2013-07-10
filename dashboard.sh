@@ -14,7 +14,27 @@ log_dashboard() {
 }
 
 show_status() {
-	echo "Running $($CAT $WORKERS_PIDS_FILE 2>/dev/null | $WC -w) workers"
+	if [ -e $MANAGER_PID_FILE ]
+	then
+		local MANAGER_PID
+		read -r MANAGER_PID < $MANAGER_PID_FILE
+
+		log_dashboard "Sending status request"
+		$KILL -s SIGUSR1 $MANAGER_PID
+
+		log_dashboard "Waiting 5 second for status response"
+		local MANAGER_STATUS
+		read -t 5 MANAGER_STATUS <> $MANAGER_STATUS_PIPE
+
+		if [ -n "$MANAGER_STATUS" ]
+		then
+			log_dashboard "Status: $MANAGER_STATUS"
+		else
+			log_dashboard "No response received from manager"
+		fi
+	else 
+		log_dashboard "Manager is not running"
+	fi
 }
 
 start_manager() {
@@ -23,7 +43,7 @@ start_manager() {
 		log_dashboard "Starting manager"
 
 		# Run manager script with nohup
-		$NOHUP $SCRIPT_MANAGER > /dev/null 2>&1 &
+		$NOHUP $SCRIPT_MANAGER 2>/dev/null 1>/dev/null &
 		echo -n "$!" > $MANAGER_PID_FILE
 	else
 		log_dashboard "Manager is already running"
@@ -36,16 +56,6 @@ stop_manager() {
 		log_dashboard "Sending term signal to manager"
 		$KILL -TERM $($CAT $MANAGER_PID_FILE)
 		$RM -f $MANAGER_PID_FILE
-	else
-		log_dashboard "Manager is not running"
-	fi
-}
-
-free_manager() {
-	if [ -e "$MANAGER_PID_FILE" ]
-	then
-		log_dashboard "Sending USR1 signal to manager"
-		$KILL -USR1 $($CAT $MANAGER_PID_FILE)
 	else
 		log_dashboard "Manager is not running"
 	fi

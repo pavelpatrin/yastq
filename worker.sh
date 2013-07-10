@@ -25,6 +25,9 @@ log_worker "Starting worker"
 # Continue next task after
 CONTINUE=1
 
+# Create descriptor to pipe
+exec 3< $MANAGER_TASKS_PIPE
+
 # Tasks loop
 while [ 1 = "$CONTINUE" ]
 do
@@ -32,7 +35,7 @@ do
 	unset -v TASK_INFO
 
 	# Read next task
-	read -a TASK_INFO < $MANAGER_TASKS_PIPE 2>/dev/null
+	read -u 3 -a TASK_INFO < $MANAGER_TASKS_PIPE 2>/dev/null
 
 	# If it is array that contains elements
 	if [ -n "$TASK_INFO" ]
@@ -64,4 +67,8 @@ do
 	fi
 done
 
+# Close descriptor to pipe
+exec 3<&-
+
+# Log about exiting
 log_worker "Worker exiting"

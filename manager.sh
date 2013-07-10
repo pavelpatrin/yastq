@@ -57,16 +57,23 @@ stop_workers() {
 }
 
 stop_manager() {
-	log_manager "Stopping"
+	log_manager "Stopping workers"
 	stop_workers
 	exit
+}
+
+send_status() {
+	echo "STATUSS!!!\nStaa!!!" > $MANAGER_STATUS_PIPE
 }
 
 # On TERM exiting
 trap 'stop_manager' TERM
 
+# On USR1 send status info
+trap 'send_status' USR1
+
 # Log about start
-log_manager "Starting"
+log_manager "Manager starting"
 
 # Start workers
 start_workers
@@ -97,4 +104,4 @@ do
 	fi
 done
 
-log_manager "Shutting down"
+log_manager "Manager exiting"
