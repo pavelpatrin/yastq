@@ -8,60 +8,117 @@ else echo "Config file not found"; exit 1; fi
 # Check existance of common code
 if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
 
-log_dashboard() {
+log_dashboard() 
+{
 	echo "$($DATE +'%F %T') (dashboard) $1"
 	echo "$($DATE +'%F %T') (dashboard) $1" >> $LOG_DASHBOARD
 }
 
-show_status() {
-	if [ -e $MANAGER_PID_FILE ]
-	then
-		local MANAGER_PID
-		read -r MANAGER_PID < $MANAGER_PID_FILE
-
-		log_dashboard "Sending status request"
-		$KILL -s SIGUSR1 $MANAGER_PID
-
-		log_dashboard "Waiting 5 second for status response"
-		local MANAGER_STATUS
-		read -t 5 MANAGER_STATUS <> $MANAGER_STATUS_PIPE
-
-		if [ -n "$MANAGER_STATUS" ]
-		then
-			log_dashboard "Status: $MANAGER_STATUS"
-		else
-			log_dashboard "No response received from manager"
-		fi
-	else 
-		log_dashboard "Manager is not running"
+##
+## Echoes managers pid or returns error code
+##
+manager_get_pid() 
+{
+	if ! [ -e $MANAGER_PID_FILE ]
+	then 
+		return 1
 	fi
+
+	local MANAGER_PID
+	read -r MANAGER_PID < $MANAGER_PID_FILE
+
+	if ! $PS -p $MANAGER_PID 2>/dev/null >/dev/null
+	then
+		return 2
+	fi
+
+	echo $MANAGER_PID
+	return 0
 }
 
-start_manager() {
-	if ! [ -e "$MANAGER_PID_FILE" ]
-	then
-		log_dashboard "Starting manager"
+## 
+## Query master for status
+##
+show_status() 
+{
+	local MANAGER_PID
+	local MANAGER_RUNING
+	MANAGER_PID=$(manager_get_pid)
+	MANAGER_RUNING=$?
 
-		# Run manager script with nohup
-		$NOHUP $SCRIPT_MANAGER 2>/dev/null 1>/dev/null &
-		echo -n "$!" > $MANAGER_PID_FILE
-	else
+	if ! $MANAGER_RUNING
+	then
+		log_dashboard "Manager is not running"
+		return 1
+	fi
+
+	log_dashboard "Sending status request" 
+	if ! $KILL -s SIGUSR1 $MANAGER_PID 2>/dev/null >/dev/null
+	then
+		log_dashboard "Cannot send status request"
+		return 1
+	fi
+
+	log_dashboard "Waiting 5 second for status response"
+	local MANAGER_STATUS
+	read -r -t 5 MANAGER_STATUS <> $MANAGER_STATUS_PIPE
+
+	if [ -z "$MANAGER_STATUS" ]
+	then
+		log_dashboard "No response received from manager"
+		return 1
+	fi
+
+	log_dashboard "Status: $MANAGER_STATUS"
+	return 0
+}
+
+## 
+## Starts manager process in background
+##
+start_manager() 
+{
+	local MANAGER_PID
+	local MANAGER_RUNING
+	MANAGER_PID=$(manager_get_pid)
+	MANAGER_RUNING=$?
+
+	if ! $MANAGER_RUNING
+	then
 		log_dashboard "Manager is already running"
+		return 1
 	fi
+
+	log_dashboard "Starting manager"
+	$NOHUP $SCRIPT_MANAGER 2>/dev/null >/dev/null &
+	echo -n "$!" > $MANAGER_PID_FILE
+	return 0
 }
 
-stop_manager() {
-	if [ -e "$MANAGER_PID_FILE" ]
+## 
+## Stops manager process
+##
+stop_manager() 
+{
+	local MANAGER_PID
+	local MANAGER_RUNING
+	MANAGER_PID=$(manager_get_pid)
+	MANAGER_RUNING=$?
+
+	if ! $MANAGER_RUNING
 	then
-		log_dashboard "Sending term signal to manager"
-		$KILL -TERM $($CAT $MANAGER_PID_FILE)
-		$RM -f $MANAGER_PID_FILE
-	else
 		log_dashboard "Manager is not running"
+		return 1
 	fi
+
+	log_dashboard "Sending term signal to manager"
+	$KILL -TERM $MANAGER_PID 2>/dev/null >/dev/null
+	$RM -f $MANAGER_PID_FILE
+	return 0
 }
 
-append_manager_tasks() {
+append_manager_tasks() 
+{
 	log_dashboard "Adding task '$1' with success '$2' and fail '$3' to manager tasks"
 
 	echo $(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0) >> $MANAGER_TASKS_FILE
