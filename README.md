@@ -5,7 +5,7 @@
 4. it is possible to add success (exit code 0) and fail (exit code not 0) handlers for every task
 
 ## Installation:
-1. do chmod a+x worker.sh manager.sh queue.sh
+1. do chmod a+x worker.sh manager.sh worker.sh
 2. copy yastq.conf.sample to ~/.yastq.conf or to /etc/yastq.conf
 
 ## Use:

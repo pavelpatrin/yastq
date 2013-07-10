@@ -8,9 +8,9 @@ else echo "Config file not found"; exit 1; fi
 # Check existance of common code
 if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
 
-log_manager() {
-	echo "$($DATE +'%F %T') (manager) $1"
-	echo "$($DATE +'%F %T') (manager) $1" >> $LOG_MANAGER
+log_dashboard() {
+	echo "$($DATE +'%F %T') (dashboard) $1"
+	echo "$($DATE +'%F %T') (dashboard) $1" >> $LOG_DASHBOARD
 }
 
 show_status() {
@@ -20,34 +20,34 @@ show_status() {
 start_workers() {
 	if ! [ -e "$WORKERS_PIDS_FILE" ]
 	then
-		log_manager "Starting new workers"
+		log_dashboard "Starting new workers"
 		echo -n "" > $WORKERS_PIDS_FILE
 		for ((i=1; i<=$MAX_PARALLEL_SHEDULES; i++))
 		do
-			log_manager "Starting new worker"
+			log_dashboard "Starting new worker"
 
 			# Run worker script with nohup
 			$NOHUP $SCRIPT_WORKER > /dev/null 2>&1 &
 			echo -n "$! " >> $WORKERS_PIDS_FILE
 		done
 	else
-		log_manager "Workers are already running"
+		log_dashboard "Workers are already running"
 	fi
 }
 
 stop_workers() {
 	if [ -e "$WORKERS_PIDS_FILE" ]
 	then
-		log_manager "Sending TERM signal to workers"
+		log_dashboard "Sending TERM signal to workers"
 		$KILL -TERM $($CAT $WORKERS_PIDS_FILE)
 
-		log_manager "Waiting for workers"
+		log_dashboard "Waiting for workers"
 		wait_workers
 		
-		log_manager "All workers done"
+		log_dashboard "All workers done"
 		$RM -f $WORKERS_PIDS_FILE
 	else
-		log_manager "Workers are not running"
+		log_dashboard "Workers are not running"
 	fi
 }
 
@@ -59,44 +59,44 @@ wait_workers() {
 	done
 }
 
-start_tasks_queue() {
-	if ! [ -e "$TASKS_QUEUE_PID_FILE" ]
+start_manager() {
+	if ! [ -e "$MANAGER_PID_FILE" ]
 	then
-		log_manager "Starting new tasks queue"
+		log_dashboard "Starting manager"
 
-		# Run tasks queue script with nohup
-		$NOHUP $SCRIPT_TASKS_QUEUE > /dev/null 2>&1 &
-		echo -n "$!" > $TASKS_QUEUE_PID_FILE
+		# Run manager script with nohup
+		$NOHUP $SCRIPT_MANAGER > /dev/null 2>&1 &
+		echo -n "$!" > $MANAGER_PID_FILE
 	else
-		log_manager "Tasks queue is already running"
+		log_dashboard "Manager is already running"
 	fi
 }
 
-stop_tasks_queue() {
-	if [ -e "$TASKS_QUEUE_PID_FILE" ]
+stop_manager() {
+	if [ -e "$MANAGER_PID_FILE" ]
 	then
-		log_manager "Sending kill signal to tasks queue"
-		$KILL -TERM $($CAT $TASKS_QUEUE_PID_FILE)
-		$RM -f $TASKS_QUEUE_PID_FILE
+		log_dashboard "Sending term signal to manager"
+		$KILL -TERM $($CAT $MANAGER_PID_FILE)
+		$RM -f $MANAGER_PID_FILE
 	else
-		log_manager "Tasks queue is not running"
+		log_dashboard "Manager is not running"
 	fi
 }
 
-free_tasks_queue() {
-	if [ -e "$TASKS_QUEUE_PID_FILE" ]
+free_manager() {
+	if [ -e "$MANAGER_PID_FILE" ]
 	then
-		log_manager "Sending USR1 signal to tasks queue"
-		$KILL -USR1 $($CAT $TASKS_QUEUE_PID_FILE)
+		log_dashboard "Sending USR1 signal to manager"
+		$KILL -USR1 $($CAT $MANAGER_PID_FILE)
 	else
-		log_manager "Tasks queue is not running"
+		log_dashboard "Manager is not running"
 	fi
 }
 
-append_tasks_queue() {
-	log_manager "Adding task '$1' with success '$2' and fail '$3' to tasks queue"
+append_manager_tasks() {
+	log_dashboard "Adding task '$1' with success '$2' and fail '$3' to manager tasks"
 
-	echo $(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0) >> $TASKS_QUEUE_FILE
+	echo $(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0) >> $MANAGER_TASKS_FILE
 }
 
 print_usage() {
@@ -111,12 +111,12 @@ shift
 case $ACTION in 
 	"start")
 		start_workers
-		start_tasks_queue
+		start_manager
 		;;
 	"stop")
-		free_tasks_queue
+		free_manager
 		stop_workers
-		stop_tasks_queue
+		stop_manager
 		;;
 	"status")
 		show_status
@@ -142,7 +142,7 @@ case $ACTION in
 					shift; shift
 					;;
 				*)		
-					log_manager "Skipping invalid option $1"; 
+					log_dashboard "Skipping invalid option $1"; 
 					shift
 					;;
 			esac
@@ -151,7 +151,7 @@ case $ACTION in
 		# Append task or show usage
 		if [ -n "$TASK" ]
 		then
-			append_tasks_queue "$TASK" "$SUCCESS" "$FAIL"
+			append_manager_tasks "$TASK" "$SUCCESS" "$FAIL"
 		else
 			print_usage
 		fi

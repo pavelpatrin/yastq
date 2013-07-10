@@ -29,10 +29,10 @@ CONTINUE=1
 while [ 1 = "$CONTINUE" ]
 do
 	# Clear previous task
-	TASK_INFO=
+	unser -v TASK_INFO
 
 	# Read next task
-	read -a TASK_INFO < $TASKS_QUEUE_PIPE 2>/dev/null
+	read -a TASK_INFO < $MANAGER_TASKS_PIPE 2>/dev/null
 
 	# If it is array that contains elements
 	if [ -n "$TASK_INFO" ]

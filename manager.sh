@@ -8,22 +8,22 @@ else echo "Config file not found"; exit 1; fi
 # Check existance of common code
 if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
 
-log_queue() {
-	echo "$($DATE +'%F %T') (queue) $1" >> $LOG_QUEUE
+log_manager() {
+	echo "$($DATE +'%F %T') (manager) $1" >> $LOG_MANAGER
 }
 
 set_mode_tasks() {
-	log_queue "Entering mode sending tasks"
+	log_manager "Entering mode sending tasks"
 	SEND_EMPTY_LINES=0
 }
 
 set_mode_empty_lines() {
-	log_queue "Entering mode sending empty lines"
+	log_manager "Entering mode sending empty lines"
 	SEND_EMPTY_LINES=1
 }
 
-stop_queue() {
-	log_queue "Stopping tasks queue"
+stop_manager() {
+	log_manager "Stopping manager"
 	exit
 }
 
@@ -34,13 +34,13 @@ trap 'set_mode_empty_lines' USR1
 trap 'set_mode_tasks' USR2
 
 # ON TERM exiting
-trap 'stop_queue' TERM
+trap 'stop_manager' TERM
 
 # Whet it sets to 1 script sends empty lines to pipe
 SEND_EMPTY_LINES=0
 
 # Log about start
-log_queue "Starting task queue"
+log_manager "Starting manager"
 
 # Infinitie loop
 while [ 0 ]
@@ -48,25 +48,25 @@ do
 	if [ 1 != "$SEND_EMPTY_LINES" ]
 	then
 		# Read new task
-		TASK=$($HEAD -n 1 $TASKS_QUEUE_FILE)
+		TASK=$($HEAD -n 1 $MANAGER_TASKS_FILE)
 
 		# If task is not empty
 		if [ -n "$TASK" ]
 		then
 			# Log action 
-			log_queue "Sending base64 task '$TASK' to pipe"
+			log_manager "Sending base64 task '$TASK' to pipe"
 
 			# Send new task to pipe
-			echo $TASK > $TASKS_QUEUE_PIPE
+			echo $TASK > $MANAGER_TASKS_PIPE
 
 			# Remove task from tasks file
-			$SED -i 1d $TASKS_QUEUE_FILE
+			$SED -i 1d $MANAGER_TASKS_FILE
 		else
 			# Sleep if no task received
 			$SLEEP 1s
 		fi
 	else
 		# Send empty lines to pipe
-		echo > $QUEUE_TASKS_PIPE
+		echo > $MANAGER_TASKS_PIPE
 	fi
 done

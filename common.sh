@@ -8,7 +8,7 @@ else echo "Config file not found"; exit 1; fi
 # Check configuration options
 if ! [ -d "$SCRIPT_DIR" ]; then echo "Error: SCRIPT_DIR is not setted propertly in configuration file."; exit 1; fi
 if ! [ -x "$SCRIPT_WORKER" ]; then echo "Error: SCRIPT_WORKER is not setted propertly in configuration file."; exit 1; fi
-if ! [ -x "$SCRIPT_TASKS_QUEUE" ]; then echo "Error: SCRIPT_TASKS_QUEUE is not setted propertly in configuration file."; exit 1; fi
+if ! [ -x "$SCRIPT_MANAGER" ]; then echo "Error: SCRIPT_MANAGER is not setted propertly in configuration file."; exit 1; fi
 if ! [ -n "$MAX_PARALLEL_SHEDULES" ]; then echo "Error: MAX_PARALLEL_SHEDULES is not setted propertly in configuration file."; exit 1; fi
 
 # Get and check utilities paths
@@ -48,21 +48,25 @@ if ! [ -x "$MKFIFO" ]; then echo "Error: mkfifo is not found"; exit 1; fi
 # Workers pids file
 WORKERS_PIDS_FILE=$SCRIPT_DIR/pid/workers
 
-# Tasks queue
-TASKS_QUEUE_FILE=$SCRIPT_DIR/db/tasks
-TASKS_QUEUE_PIPE=$SCRIPT_DIR/pipe/tasks
-TASKS_QUEUE_PID_FILE=$SCRIPT_DIR/pid/tasksqueue
+# Manager tasks file
+MANAGER_TASKS_FILE=$SCRIPT_DIR/db/tasks
+
+# Manager pipe to receive tasks
+MANAGER_TASKS_PIPE=$SCRIPT_DIR/pipe/tasks
+
+# Manager pid file
+MANAGER_PID_FILE=$SCRIPT_DIR/pid/manager
 
 # Logs
-LOG_WORKER=$SCRIPT_DIR/log/worker.log
+LOG_DASHBOARD=$SCRIPT_DIR/log/dashboard.log
 LOG_MANAGER=$SCRIPT_DIR/log/manager.log
-LOG_QUEUE=$SCRIPT_DIR/log/queue.log
+LOG_WORKER=$SCRIPT_DIR/log/worker.log
 
-# Create queue files
-if ! [ -e "$TASKS_QUEUE_FILE" ]; then $TOUCH $TASKS_QUEUE_FILE; fi
-if ! [ -e "$TASKS_QUEUE_PIPE" ]; then $MKFIFO $TASKS_QUEUE_PIPE; fi
+# Create manager files
+if ! [ -e "$MANAGER_TASKS_FILE" ]; then $TOUCH $MANAGER_TASKS_FILE; fi
+if ! [ -e "$MANAGER_TASKS_PIPE" ]; then $MKFIFO $MANAGER_TASKS_PIPE; fi
 
 # Create log files
+if ! [ -e "$LOG_DASHBOARD" ]; then $TOUCH $LOG_DASHBOARD; fi
 if ! [ -e "$LOG_MANAGER" ]; then $TOUCH $LOG_MANAGER; fi
 if ! [ -e "$LOG_WORKER" ]; then $TOUCH $LOG_WORKER; fi
-if ! [ -e "$LOG_QUEUE" ]; then $TOUCH $LOG_QUEUE; fi
