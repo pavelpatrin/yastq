@@ -12,61 +12,92 @@ log_manager() {
 	echo "$($DATE +'%F %T') (manager) $1" >> $LOG_MANAGER
 }
 
-set_mode_tasks() {
-	log_manager "Entering mode sending tasks"
-	SEND_EMPTY_LINES=0
+start_workers() {
+	if ! [ -e "$WORKERS_PIDS_FILE" ]
+	then
+		log_manager "Starting new workers"
+
+		echo > $WORKERS_PIDS_FILE
+		for ((i=1; i<=$MAX_PARALLEL_SHEDULES; i++))
+		do
+			log_manager "Starting new worker"
+
+			# Run worker script
+			$SCRIPT_WORKER > /dev/null 2>&1 &
+			echo -n "$! " >> $WORKERS_PIDS_FILE
+
+			log_manager "Worker $! has starded"
+		done
+		
+		log_manager "All workers started"
+	else
+		log_manager "Workers are already running"
+	fi
 }
 
-set_mode_empty_lines() {
-	log_manager "Entering mode sending empty lines"
-	SEND_EMPTY_LINES=1
+stop_workers() {
+	if [ -e "$WORKERS_PIDS_FILE" ]
+	then
+		log_manager "Sending TERM signal to workers"
+		$KILL -TERM $($CAT $WORKERS_PIDS_FILE)
+
+		log_manager "Waiting for workers"
+		$PS --pid $($CAT $WORKERS_PIDS_FILE) 2>&1 > /dev/null
+		while [ "${?}" = 0 ]
+		do
+		    $SLEEP 1s
+		    $PS --pid $($CAT $WORKERS_PIDS_FILE) 2>&1 > /dev/null
+		done
+		
+		log_manager "All workers done"
+		$RM -f $WORKERS_PIDS_FILE
+	else
+		log_manager "Workers are not running"
+	fi
 }
 
 stop_manager() {
-	log_manager "Stopping manager"
+	log_manager "Manager stopping"
+	stop_workers
 	exit
 }
-
-# On USR1 selecting mode sending empty lines
-trap 'set_mode_empty_lines' USR1
-
-# On USR2 selecting mode sending tasks
-trap 'set_mode_tasks' USR2
 
 # ON TERM exiting
 trap 'stop_manager' TERM
 
-# Whet it sets to 1 script sends empty lines to pipe
-SEND_EMPTY_LINES=0
-
 # Log about start
-log_manager "Starting manager"
+log_manager "Manager started"
+
+# Start workers
+start_workers
+
+# Open descriptor to tasks file
+exec 3<>$MANAGER_TASKS_FILE
 
 # Infinitie loop
 while [ 0 ]
 do
-	if [ 1 != "$SEND_EMPTY_LINES" ]
+	# Unset previous task
+	unset -v TASK
+
+	# Read new task from tasks file descriptor
+	read -r -u 3 TASK
+
+	# If task is not empty
+	if [ -n "$TASK" ]
 	then
-		# Read new task
-		TASK=$($HEAD -n 1 $MANAGER_TASKS_FILE)
+		# Log action 
+		log_manager "Sending base64 task '$TASK' to pipe"
 
-		# If task is not empty
-		if [ -n "$TASK" ]
-		then
-			# Log action 
-			log_manager "Sending base64 task '$TASK' to pipe"
+		# Send new task to pipe
+		echo $TASK > $MANAGER_TASKS_PIPE
 
-			# Send new task to pipe
-			echo $TASK > $MANAGER_TASKS_PIPE
-
-			# Remove task from tasks file
-			$SED -i 1d $MANAGER_TASKS_FILE
-		else
-			# Sleep if no task received
-			$SLEEP 1s
-		fi
+		# Remove task from tasks file
+		$SED -i 1d $MANAGER_TASKS_FILE
 	else
-		# Send empty lines to pipe
-		echo > $MANAGER_TASKS_PIPE
+		# Sleep if no task received
+		$SLEEP 1s
 	fi
 done
+
+log_manager "Manager stopped"

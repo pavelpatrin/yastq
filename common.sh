@@ -26,10 +26,6 @@ DATE=`type -P date`
 if ! [ -x "$DATE" ]; then echo "Error: date is not found"; exit 1; fi
 KILL=`type -P kill`
 if ! [ -x "$KILL" ]; then echo "Error: kill is not found"; exit 1; fi
-HEAD=`type -P head`
-if ! [ -x "$HEAD" ]; then echo "Error: head is not found"; exit 1; fi
-TAIL=`type -P tail`
-if ! [ -x "$TAIL" ]; then echo "Error: tail is not found"; exit 1; fi
 GREP=`type -P grep`
 if ! [ -x "$GREP" ]; then echo "Error: grep is not found"; exit 1; fi
 TOUCH=`type -P touch`

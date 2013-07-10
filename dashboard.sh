@@ -17,48 +17,6 @@ show_status() {
 	echo "Running $($CAT $WORKERS_PIDS_FILE 2>/dev/null | $WC -w) workers"
 }
 
-start_workers() {
-	if ! [ -e "$WORKERS_PIDS_FILE" ]
-	then
-		log_dashboard "Starting new workers"
-		echo -n "" > $WORKERS_PIDS_FILE
-		for ((i=1; i<=$MAX_PARALLEL_SHEDULES; i++))
-		do
-			log_dashboard "Starting new worker"
-
-			# Run worker script with nohup
-			$NOHUP $SCRIPT_WORKER > /dev/null 2>&1 &
-			echo -n "$! " >> $WORKERS_PIDS_FILE
-		done
-	else
-		log_dashboard "Workers are already running"
-	fi
-}
-
-stop_workers() {
-	if [ -e "$WORKERS_PIDS_FILE" ]
-	then
-		log_dashboard "Sending TERM signal to workers"
-		$KILL -TERM $($CAT $WORKERS_PIDS_FILE)
-
-		log_dashboard "Waiting for workers"
-		wait_workers
-		
-		log_dashboard "All workers done"
-		$RM -f $WORKERS_PIDS_FILE
-	else
-		log_dashboard "Workers are not running"
-	fi
-}
-
-wait_workers() {
-	while [ "${?}" = 0 ]
-	do
-	    $SLEEP 1s
-	    $PS --pid $($CAT $WORKERS_PIDS_FILE) 2>&1 > /dev/null
-	done
-}
-
 start_manager() {
 	if ! [ -e "$MANAGER_PID_FILE" ]
 	then
@@ -99,23 +57,15 @@ append_manager_tasks() {
 	echo $(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0) >> $MANAGER_TASKS_FILE
 }
 
-print_usage() {
-	echo "Usage: yastq.sh start|stop|status|add-task"
-	echo "       yastq.sh add-task task TASK [success SUCCESS] [fail FAIL]"
-}
-
 # Currect action
 ACTION=$1
 shift
 
 case $ACTION in 
 	"start")
-		start_workers
 		start_manager
 		;;
 	"stop")
-		free_manager
-		stop_workers
 		stop_manager
 		;;
 	"status")
@@ -153,10 +103,11 @@ case $ACTION in
 		then
 			append_manager_tasks "$TASK" "$SUCCESS" "$FAIL"
 		else
-			print_usage
+			log_dashboard "Task is empty"; 
 		fi
 		;;
 	*)
-		print_usage
+		echo "Usage: $0 start|stop|status|add-task"
+		echo "       $0 add-task task TASK [success SUCCESS] [fail FAIL]"
 		;;
 esac
