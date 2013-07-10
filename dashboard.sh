@@ -8,18 +8,21 @@ else echo "Config file not found"; exit 1; fi
 # Check existance of common code
 if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
 
-log_dashboard() 
+##
+## Sends message to log
+##
+dashboard_log() 
 {
 	echo "$($DATE +'%F %T') (dashboard) $1"
 	echo "$($DATE +'%F %T') (dashboard) $1" >> $LOG_DASHBOARD
 }
 
 ##
-## Echoes managers pid or returns error code
+## Echoes pid of manager or returns error code
 ##
-manager_get_pid() 
+manager_pid() 
 {
-	if ! [ -e $MANAGER_PID_FILE ]
+	if ! [ -e "$MANAGER_PID_FILE" ]
 	then 
 		return 1
 	fi
@@ -27,7 +30,7 @@ manager_get_pid()
 	local MANAGER_PID
 	read -r MANAGER_PID < $MANAGER_PID_FILE
 
-	if ! $PS -p $MANAGER_PID 2>/dev/null >/dev/null
+	if ! $PS -p $MANAGER_PID >/dev/null
 	then
 		return 2
 	fi
@@ -39,57 +42,57 @@ manager_get_pid()
 ## 
 ## Query master for status
 ##
-show_status() 
+manager_status() 
 {
 	local MANAGER_PID
 	local MANAGER_RUNING
-	MANAGER_PID=$(manager_get_pid)
+	MANAGER_PID=$(manager_pid)
 	MANAGER_RUNING=$?
 
 	if ! $MANAGER_RUNING
 	then
-		log_dashboard "Manager is not running"
+		dashboard_log "Manager is not running"
 		return 1
 	fi
 
-	log_dashboard "Sending status request" 
-	if ! $KILL -s SIGUSR1 $MANAGER_PID 2>/dev/null >/dev/null
+	dashboard_log "Sending status request" 
+	if ! $KILL -s SIGUSR1 $MANAGER_PID >/dev/null
 	then
-		log_dashboard "Cannot send status request"
+		dashboard_log "Cannot send status request"
 		return 1
 	fi
 
-	log_dashboard "Waiting 5 second for status response"
+	dashboard_log "Waiting 5 second for status response"
 	local MANAGER_STATUS
 	read -r -t 5 MANAGER_STATUS <> $MANAGER_STATUS_PIPE
 
 	if [ -z "$MANAGER_STATUS" ]
 	then
-		log_dashboard "No response received from manager"
+		dashboard_log "No response received from manager"
 		return 1
 	fi
 
-	log_dashboard "Status: $MANAGER_STATUS"
+	dashboard_log "Status: $MANAGER_STATUS"
 	return 0
 }
 
 ## 
 ## Starts manager process in background
 ##
-start_manager() 
+manager_start() 
 {
 	local MANAGER_PID
 	local MANAGER_RUNING
-	MANAGER_PID=$(manager_get_pid)
+	MANAGER_PID=$(manager_pid)
 	MANAGER_RUNING=$?
 
 	if ! $MANAGER_RUNING
 	then
-		log_dashboard "Manager is already running"
+		dashboard_log "Manager is already running"
 		return 1
 	fi
 
-	log_dashboard "Starting manager"
+	dashboard_log "Starting manager"
 	$NOHUP $SCRIPT_MANAGER 2>/dev/null >/dev/null &
 	echo -n "$!" > $MANAGER_PID_FILE
 	return 0
@@ -98,28 +101,31 @@ start_manager()
 ## 
 ## Stops manager process
 ##
-stop_manager() 
+manager_stop() 
 {
 	local MANAGER_PID
 	local MANAGER_RUNING
-	MANAGER_PID=$(manager_get_pid)
+	MANAGER_PID=$(manager_pid)
 	MANAGER_RUNING=$?
 
 	if ! $MANAGER_RUNING
 	then
-		log_dashboard "Manager is not running"
+		dashboard_log "Manager is not running"
 		return 1
 	fi
 
-	log_dashboard "Sending term signal to manager"
-	$KILL -TERM $MANAGER_PID 2>/dev/null >/dev/null
+	dashboard_log "Sending term signal to manager"
+	$KILL -TERM $MANAGER_PID >/dev/null
 	$RM -f $MANAGER_PID_FILE
 	return 0
 }
 
-append_manager_tasks() 
+## 
+## Appends tasks queue
+##
+manager_append_tasks() 
 {
-	log_dashboard "Adding task '$1' with success '$2' and fail '$3' to manager tasks"
+	dashboard_log "Adding task '$1' with success '$2' and fail '$3' to manager tasks"
 
 	echo $(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0) >> $MANAGER_TASKS_FILE
 }
@@ -130,13 +136,13 @@ shift
 
 case $ACTION in 
 	"start")
-		start_manager
+		manager_start
 		;;
 	"stop")
-		stop_manager
+		manager_stop
 		;;
 	"status")
-		show_status
+		manager_status
 		;;
 	"add-task")
 		SUCCESS=$FALSE
@@ -159,7 +165,7 @@ case $ACTION in
 					shift; shift
 					;;
 				*)		
-					log_dashboard "Skipping invalid option $1"; 
+					dashboard_log "Skipping invalid option $1"; 
 					shift
 					;;
 			esac
@@ -168,9 +174,9 @@ case $ACTION in
 		# Append task or show usage
 		if [ -n "$TASK" ]
 		then
-			append_manager_tasks "$TASK" "$SUCCESS" "$FAIL"
+			manager_append_tasks "$TASK" "$SUCCESS" "$FAIL"
 		else
-			log_dashboard "Task is empty"; 
+			dashboard_log "Task is empty"; 
 		fi
 		;;
 	*)

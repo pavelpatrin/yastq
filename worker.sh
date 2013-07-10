@@ -8,67 +8,71 @@ else echo "Config file not found"; exit 1; fi
 # Check existance of common code
 if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
 
-log_worker() {
+##
+## Sends message to log
+##
+worker_log() 
+{
 	echo "$($DATE +'%F %T') (worker $$) $1" >> $LOG_WORKER
 }
 
-prevent_next_iteration() {
-	CONTINUE=0
+##
+## Runs task
+##
+worker_run_task()
+{
+	local TASK
+
+	eval "$TASK &"
+	wait $!
+	return $?
+}
+
+##
+## Gracefully stops the worker after current task
+##
+worker_graceful_stop()
+{
+	worker_log "Stopping gracefully"
+	GRACEFUL_STOP=1
 }
 
 # Handle TERM signal for permit next iteration
-trap 'prevent_next_iteration' TERM
+trap 'worker_graceful_stop' TERM
 
 # Log about starting
-log_worker "Starting worker"
-
-# Continue next task after
-CONTINUE=1
-
-# Create descriptor to pipe
-exec 3< $MANAGER_TASKS_PIPE
+worker_log "Starting"
 
 # Tasks loop
-while [ 1 = "$CONTINUE" ]
+while [ -z "$GRACEFUL_STOP" ]
 do
 	# Clear previous task
 	unset -v TASK_INFO
 
-	# Read next task
-	read -u 3 -a TASK_INFO < $MANAGER_TASKS_PIPE 2>/dev/null
+	# Read next task with 1 sec timeout
+	read -t 1 -a TASK_INFO <> $MANAGER_TASKS_PIPE
 
-	# If it is array that contains elements
-	if [ -n "$TASK_INFO" ]
-	then
-		# Save aplitted into variables
-		TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
-		SUCC=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
-		FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
+	# Save aplitted into variables
+	TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
+	SUCC=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
+	FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
 
-		# Log task start
-		log_worker "Running task: $TASK"
+	# Log task start
+	worker_log "Running task: $TASK"
 
-		# Run task
-		eval "$TASK &"
-		wait $!
-		CODE=$?
+	# Run task
+	worker_run_task $TASK
+	CODE=$?
 
-		if [ 0 = "$CODE" ]
-		then 
-			log_worker "Running task finished with code $CODE: $TASK. Executing SUCC command: $SUCC"
-			eval "$SUCC"
-		else 
-			log_worker "Running task finished with code $CODE: $TASK. Executing FAIL command: $FAIL"
-			eval "$FAIL"
-		fi
-	else
-		# Task is empty. Sleep
-		$SLEEP 1s
+	if [ 0 = "$CODE" ]
+	then 
+		worker_log "Running task finished with code $CODE: $TASK. Executing SUCC command: $SUCC"
+		worker_run_task $SUCC
+	else 
+		worker_log "Running task finished with code $CODE: $TASK. Executing FAIL command: $FAIL"
+		worker_run_task $FAIL
 	fi
 done
 
-# Close descriptor to pipe
-exec 3<&-
-
 # Log about exiting
-log_worker "Worker exiting"
+worker_log "Exiting"
