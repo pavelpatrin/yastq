@@ -57,16 +57,16 @@ stop_workers() {
 }
 
 stop_manager() {
-	log_manager "Manager stopping"
+	log_manager "Stopping"
 	stop_workers
 	exit
 }
 
-# ON TERM exiting
+# On TERM exiting
 trap 'stop_manager' TERM
 
 # Log about start
-log_manager "Manager started"
+log_manager "Starting"
 
 # Start workers
 start_workers
@@ -97,4 +97,4 @@ do
 	fi
 done
 
-log_manager "Manager stopped"
+log_manager "Shutting down"
