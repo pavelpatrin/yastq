@@ -21,7 +21,7 @@ worker_log()
 ##
 worker_run_task()
 {
-	local TASK
+	local TASK=$1
 
 	eval "$TASK &"
 	wait $!
@@ -33,12 +33,12 @@ worker_run_task()
 ##
 worker_graceful_stop()
 {
-	worker_log "Stopping gracefully"
 	GRACEFUL_STOP=1
+	return 0
 }
 
 # Handle TERM signal for permit next iteration
-trap 'worker_graceful_stop' TERM
+trap 'worker_graceful_stop && worker_log "Stopping gracefully" || worker_log "Stopping gracefully failed"' TERM
 
 # Log about starting
 worker_log "Starting"
@@ -50,27 +50,31 @@ do
 	unset -v TASK_INFO
 
 	# Read next task with 1 sec timeout
-	read -t 1 -a TASK_INFO <> $MANAGER_TASKS_PIPE
+	read -t 1 -a TASK_INFO <> $TASKSQUEUE_TRANSMIT_PIPE
 
-	# Save aplitted into variables
-	TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
-	SUCC=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
-	FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
+	# If task info array has > 0 size
+	if [ "${#TASK_INFO[@]}" -gt 0 ]
+	then
+		# Save aplitted into variables
+		TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
+		SUCC=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
+		FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
 
-	# Log task start
-	worker_log "Running task: $TASK"
+		# Log task start
+		worker_log "Running task: $TASK"
 
-	# Run task
-	worker_run_task $TASK
-	CODE=$?
+		# Run task
+		worker_run_task "$TASK"
+		CODE=$?
 
-	if [ 0 = "$CODE" ]
-	then 
-		worker_log "Running task finished with code $CODE: $TASK. Executing SUCC command: $SUCC"
-		worker_run_task $SUCC
-	else 
-		worker_log "Running task finished with code $CODE: $TASK. Executing FAIL command: $FAIL"
-		worker_run_task $FAIL
+		if [ 0 = "$CODE" ]
+		then
+			worker_log "Running task finished with code $CODE: $TASK. Executing SUCC command: $SUCC"
+			worker_run_task $SUCC
+		else 
+			worker_log "Running task finished with code $CODE: $TASK. Executing FAIL command: $FAIL"
+			worker_run_task $FAIL
+		fi
 	fi
 done
 

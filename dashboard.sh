@@ -9,125 +9,185 @@ else echo "Config file not found"; exit 1; fi
 if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
 
 ##
-## Sends message to log
+## Echoes message  and sends it to log
 ##
-dashboard_log() 
+dashboard_say_log() 
 {
 	echo "$($DATE +'%F %T') (dashboard) $1"
 	echo "$($DATE +'%F %T') (dashboard) $1" >> $LOG_DASHBOARD
 }
 
 ##
-## Echoes pid of manager or returns error code
+## Echoes message
 ##
-manager_pid() 
+dashboard_say() 
 {
-	if ! [ -e "$MANAGER_PID_FILE" ]
+	echo "$($DATE +'%F %T') (dashboard) $1"
+}
+
+##
+## Echoes pids of workers or returns error code
+##
+workers_pids() 
+{
+	unset -v RESULT
+
+	if ! [ -e "$WORKERS_PID_FILE" ]
 	then 
 		return 1
 	fi
 
-	local MANAGER_PID
-	read -r MANAGER_PID < $MANAGER_PID_FILE
-
-	if ! $PS -p $MANAGER_PID >/dev/null
+	local WORKERS_PIDS
+	read -r WORKERS_PIDS < $WORKERS_PID_FILE
+	if ! $PS -p $WORKERS_PIDS 2>/dev/null >/dev/null
 	then
 		return 2
 	fi
 
-	echo $MANAGER_PID
+	RESULT=$WORKERS_PIDS
 	return 0
 }
 
-## 
-## Query master for status
 ##
-manager_status() 
+## Starts workers
+##
+workers_start() 
 {
-	local MANAGER_PID
-	local MANAGER_RUNING
-	MANAGER_PID=$(manager_pid)
-	MANAGER_RUNING=$?
+	unset -v RESULT
+	local WORKERS_COUNT=$1
 
-	if ! $MANAGER_RUNING
+	if workers_pids
 	then
-		dashboard_log "Manager is not running"
 		return 1
 	fi
 
-	dashboard_log "Sending status request" 
-	if ! $KILL -s SIGUSR1 $MANAGER_PID >/dev/null
-	then
-		dashboard_log "Cannot send status request"
-		return 1
-	fi
+	local WORKERS_PIDS
+	for ((i=1; i<=$WORKERS_COUNT; i++))
+	do
+		# Start worker with nohup
+		$NOHUP $SCRIPT_WORKER 2>/dev/null >/dev/null &
 
-	dashboard_log "Waiting 5 second for status response"
-	local MANAGER_STATUS
-	read -r -t 5 MANAGER_STATUS <> $MANAGER_STATUS_PIPE
+		# Save worker pid
+		WORKERS_PIDS="$WORKERS_PIDS $!"
+	done
 
-	if [ -z "$MANAGER_STATUS" ]
-	then
-		dashboard_log "No response received from manager"
-		return 1
-	fi
-
-	dashboard_log "Status: $MANAGER_STATUS"
+	# Store workers pids into pidfile
+	echo $WORKERS_PIDS > $WORKERS_PID_FILE
 	return 0
 }
 
-## 
-## Starts manager process in background
 ##
-manager_start() 
+## Stops workers
+##
+workers_stop() 
 {
-	local MANAGER_PID
-	local MANAGER_RUNING
-	MANAGER_PID=$(manager_pid)
-	MANAGER_RUNING=$?
+	unset -v RESULT
 
-	if ! $MANAGER_RUNING
+	if workers_pids
 	then
-		dashboard_log "Manager is already running"
+		local WORKERS_PIDS=$RESULT
+
+		# Sending term signal to workers
+		$KILL -s SIGTERM $WORKERS_PIDS >/dev/null
+
+		# Waiting for workers exiting
+		while $PS -p $WORKERS_PIDS >/dev/null
+		do
+		    $SLEEP 1s
+		done
+		
+		# Remove pids file
+		$RM -f $WORKERS_PID_FILE
+		return 0
+	fi
+	
+	return 1
+}
+
+##
+## Echoes pid of tasksqueue or returns error code
+##
+tasksqueue_pid()
+{
+	unset -v RESULT
+
+	if ! [ -e "$TASKSQUEUE_PID_FILE" ]
+	then 
 		return 1
 	fi
 
-	dashboard_log "Starting manager"
-	$NOHUP $SCRIPT_MANAGER 2>/dev/null >/dev/null &
-	echo -n "$!" > $MANAGER_PID_FILE
+	local TASKSQUEUE_PID
+	read -r TASKSQUEUE_PID < $TASKSQUEUE_PID_FILE
+
+	if ! $PS -p $TASKSQUEUE_PID 2>/dev/null >/dev/null
+	then
+		return 2
+	fi
+
+	RESULT=$TASKSQUEUE_PID
 	return 0
 }
 
-## 
-## Stops manager process
 ##
-manager_stop() 
+## Starts tasks queue
+##
+tasksqueue_start()
 {
-	local MANAGER_PID
-	local MANAGER_RUNING
-	MANAGER_PID=$(manager_pid)
-	MANAGER_RUNING=$?
+	unset -v RESULT
 
-	if ! $MANAGER_RUNING
+	if tasksqueue_pid
 	then
-		dashboard_log "Manager is not running"
 		return 1
 	fi
 
-	dashboard_log "Sending term signal to manager"
-	$KILL -TERM $MANAGER_PID >/dev/null
-	$RM -f $MANAGER_PID_FILE
+	$NOHUP $SCRIPT_TASKSQUEUE 2>/dev/null >/dev/null &
+	echo $! > $TASKSQUEUE_PID_FILE
 	return 0
+}
+
+##
+## Stops tasks queue
+##
+tasksqueue_stop()
+{
+	unset -v RESULT
+
+	if tasksqueue_pid
+	then
+		local TASKSQUEUE_PID=$RESULT
+
+		# Sending term signal to workers
+		$KILL -s SIGTERM $TASKSQUEUE_PID >/dev/null
+
+		# Remove pids file
+		$RM -f $TASKSQUEUE_PID_FILE
+		return 0
+	fi
+
+	return 1
 }
 
 ## 
 ## Appends tasks queue
 ##
-manager_append_tasks() 
+tasksqueue_add_task() 
 {
-	dashboard_log "Adding task '$1' with success '$2' and fail '$3' to manager tasks"
+	unset -v RESULT
+	local TASK="$(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0)"
 
-	echo $(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0) >> $MANAGER_TASKS_FILE
+	if tasksqueue_pid
+	then
+		# Send task to running tasksqueue via pipe
+		local TASKSQUEUE_PID=$RESULT
+		$KILL -s SIGUSR1 $TASKSQUEUE_PID >/dev/null
+		echo $TASK > $TASKSQUEUE_RECEIVE_PIPE
+	else
+		# Send task to stopped tasksqueue
+		$SCRIPT_TASKSQUEUE receive-task >/dev/null &
+		echo $TASK > $TASKSQUEUE_RECEIVE_PIPE
+	fi
+
+	return 0
 }
 
 # Currect action
@@ -136,13 +196,22 @@ shift
 
 case $ACTION in 
 	"start")
-		manager_start
+		dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers..."
+		workers_start $MAX_PARALLEL_SHEDULES && dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers ok" || dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers failed ($?)"
+
+		dashboard_say_log "Staring tasks queue..."
+		tasksqueue_start && dashboard_say_log "Staring tasks queue ok" || dashboard_say_log "Staring tasks queue failed ($?)"
 		;;
 	"stop")
-		manager_stop
+		dashboard_say_log "Stopping $MAX_PARALLEL_SHEDULES workers..."
+		workers_stop && dashboard_say_log "Stopping $MAX_PARALLEL_SHEDULES workers ok" || dashboard_say_log "Stopping $MAX_PARALLEL_SHEDULES workers failed ($?)"
+
+		dashboard_say_log "Stopping tasks queue..."
+		tasksqueue_stop && dashboard_say_log "Stopping tasks queue ok" || dashboard_say_log "Stopping tasks queue failed ($?)"
 		;;
 	"status")
-		manager_status
+		workers_pids && dashboard_say "Workers are running" || dashboard_say "Workers are not running"
+		tasksqueue_pid	&& dashboard_say "Tasks queue is running" || dashboard_say "Tasks queue is not running"
 		;;
 	"add-task")
 		SUCCESS=$FALSE
@@ -165,7 +234,7 @@ case $ACTION in
 					shift; shift
 					;;
 				*)		
-					dashboard_log "Skipping invalid option $1"; 
+					dashboard_say_log "Skipping invalid option $1"; 
 					shift
 					;;
 			esac
@@ -174,9 +243,10 @@ case $ACTION in
 		# Append task or show usage
 		if [ -n "$TASK" ]
 		then
-			manager_append_tasks "$TASK" "$SUCCESS" "$FAIL"
+			dashboard_say_log "Adding task $TASK with SUCC $SUCCESS and FAIL $FAIL" 
+			tasksqueue_add_task "$TASK" "$SUCCESS" "$FAIL" && dashboard_say_log "Adding task OK" || dashboard_say_log "Adding task FAIL ($?)"
 		else
-			dashboard_log "Task is empty"; 
+			dashboard_say_log "Adding task FAIL (task is empty)" 
 		fi
 		;;
 	*)

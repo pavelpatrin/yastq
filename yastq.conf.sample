@@ -14,9 +14,9 @@ SCRIPT_COMMON=$SCRIPT_DIR/common.sh
 # SCRIPT_WORKER=/absolute/path/to/script/directory/worker.sh
 SCRIPT_WORKER=$SCRIPT_DIR/worker.sh
 
-# Manager script
-# SCRIPT_MANAGER=/absolute/path/to/script/directory/manager.sh
-SCRIPT_MANAGER=$SCRIPT_DIR/manager.sh
+# Tasksqueue script
+# SCRIPT_TASKSQUEUE=/absolute/path/to/script/directory/tasksqueue.sh
+SCRIPT_TASKSQUEUE=$SCRIPT_DIR/tasksqueue.sh
 
 # Max of parallels tasks (detected by count cpu cores)
 # MAX_PARALLEL_SHEDULES=N
