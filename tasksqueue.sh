@@ -67,7 +67,6 @@ fi
 tasksqueue_log "Starting"
 
 # Tasks loop
-echo BEFORELOOP
 while [ -z "$GRACEFUL_STOP" ]
 do
 	# Unset previous task
