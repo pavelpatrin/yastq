@@ -1,12 +1,22 @@
 #!/bin/bash
 
 # Include config file
-if [ -r ~/.yastq.conf ]; then source ~/.yastq.conf
-elif [ -r /etc/yastq.conf ]; then source /etc/yastq.conf
-else echo "Config file not found"; exit 1; fi
+if [ -r "$HOME/.yastq.conf" ]
+then 
+	source "$HOME/.yastq.conf"
+elif [ -r "/etc/yastq.conf" ]
+then 
+	source "/etc/yastq.conf"
+else 
+	echo "Config file not found"
+	exit 1
+fi
 
-# Check existance of common code
-if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
+# Include common code
+if ! source "$SCRIPT_DIR/common.sh"
+	then echo "Error including common file"
+	exit 1
+fi
 
 ##
 ## Echoes message  and sends it to log
@@ -14,7 +24,7 @@ if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
 dashboard_say_log() 
 {
 	echo "$($DATE +'%F %T') (dashboard) $1"
-	echo "$($DATE +'%F %T') (dashboard) $1" >> $LOG_DASHBOARD
+	echo "$($DATE +'%F %T') (dashboard) $1" >> $DASHBOARD_LOG_FILE
 }
 
 ##
@@ -32,13 +42,13 @@ workers_pids()
 {
 	unset -v RESULT
 
-	if ! [ -e "$WORKERS_PID_FILE" ]
+	if ! [ -e "$WORKER_PID_FILE" ]
 	then 
 		return 1
 	fi
 
 	local WORKERS_PIDS
-	read -r WORKERS_PIDS < $WORKERS_PID_FILE
+	read -r WORKERS_PIDS < $WORKER_PID_FILE
 	if ! $PS -p $WORKERS_PIDS 2>/dev/null >/dev/null
 	then
 		return 2
@@ -64,14 +74,14 @@ workers_start()
 	for ((i=1; i<=$WORKERS_COUNT; i++))
 	do
 		# Start worker with nohup
-		$NOHUP $SCRIPT_WORKER 2>/dev/null >/dev/null &
+		$NOHUP $WORKER_SCRIPT 2>/dev/null >/dev/null &
 
 		# Save worker pid
 		WORKERS_PIDS="$WORKERS_PIDS $!"
 	done
 
 	# Store workers pids into pidfile
-	echo $WORKERS_PIDS > $WORKERS_PID_FILE
+	echo $WORKERS_PIDS > $WORKER_PID_FILE
 	return 0
 }
 
@@ -94,7 +104,7 @@ workers_stop()
 		done
 		
 		# Remove pids file
-		$RM -f $WORKERS_PID_FILE
+		$RM -f $WORKER_PID_FILE
 		return 0
 	fi
 	
@@ -135,7 +145,7 @@ tasksqueue_start()
 		return 1
 	fi
 
-	$NOHUP $SCRIPT_TASKSQUEUE 2>/dev/null >/dev/null &
+	$NOHUP $TASKSQUEUE_SCRIPT 2>/dev/null >/dev/null &
 	echo $! > $TASKSQUEUE_PID_FILE
 	return 0
 }
@@ -167,20 +177,10 @@ tasksqueue_add_task()
 {
 	local TASK="$(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0)"
 
-	if tasksqueue_pid
-	then
-		# Send task to running tasksqueue via pipe
-		local TASKSQUEUE_PID=$RESULT
-		$KILL -s SIGUSR1 $TASKSQUEUE_PID >/dev/null
-		echo $TASK > $TASKSQUEUE_RECEIVE_PIPE
-	else
-		# Send task to stopped tasksqueue
-		$SCRIPT_TASKSQUEUE receive-task >/dev/null &
-		echo $TASK > $TASKSQUEUE_RECEIVE_PIPE
-		wait $!
-	fi
-
-	return 0
+	# Obtain write lock
+	{
+		$FLOCK -x 200 && echo $TASK >> $TASKSQUEUE_TASKS_FILE
+	} 200<"$TASKSQUEUE_TASKS_LOCK"
 }
 
 # Currect action
@@ -270,12 +270,12 @@ case $ACTION in
 			dashboard_say_log "Adding task $TASK with SUCC $SUCCESS and FAIL $FAIL" 
 			if tasksqueue_add_task "$TASK" "$SUCCESS" "$FAIL" 
 			then
-				dashboard_say_log "Adding task OK" 
+				dashboard_say_log "Adding task ok" 
 			else
-				dashboard_say_log "Adding task FAIL ($?)"
+				dashboard_say_log "Adding task failed ($?)"
 			fi
 		else
-			dashboard_say_log "Adding task FAIL (task is empty)" 
+			dashboard_say_log "Adding task failed (task is empty)" 
 		fi
 		;;
 	*)

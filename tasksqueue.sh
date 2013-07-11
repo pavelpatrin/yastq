@@ -1,36 +1,29 @@
 #!/bin/bash
 
 # Include config file
-if [ -r ~/.yastq.conf ]; then source ~/.yastq.conf
-elif [ -r /etc/yastq.conf ]; then source /etc/yastq.conf
-else echo "Config file not found"; exit 1; fi
+if [ -r "$HOME/.yastq.conf" ]
+then 
+	source "$HOME/.yastq.conf"
+elif [ -r "/etc/yastq.conf" ]
+then 
+	source "/etc/yastq.conf"
+else 
+	echo "Config file not found"
+	exit 1
+fi
 
-# Check existance of common code
-if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
+# Include common code
+if ! source "$SCRIPT_DIR/common.sh"
+	then echo "Error including common file"
+	exit 1
+fi
 
 ##
 ## Sends message to log
 ##
 tasksqueue_log() 
 {
-	echo "$($DATE +'%F %T') (tasksqueue $$) $1" >> $LOG_TASKSQUEUE
-}
-
-##
-## Receives task from pipe and adds it to queue
-##
-tasksqueue_receive_task()
-{
-	local RECEIVE_TASK_TIMEOUT=$1
-
-	read -t $RECEIVE_TASK_TIMEOUT -r TASK <> $TASKSQUEUE_RECEIVE_PIPE
-	if [ -n "$TASK" ]
-	then
-		echo $TASK >> $TASKSQUEUE_TASKS_FILE
-		return 0
-	fi
-
-	return 1
+	echo "$($DATE +'%F %T') (tasksqueue $$) $1" >> $TASKSQUEUE_LOG_FILE
 }
 
 ##
@@ -42,26 +35,8 @@ tasksqueue_graceful_stop()
 	return 0
 }
 
-# Handle USR1 signal to receive new task
-trap 'tasksqueue_receive_task 10 && tasksqueue_log "Receiving task ok" || tasksqueue_log "Receiving task failed ($?)"' SIGUSR1
-
 # Handle TERM signal to permit next iteration
 trap 'tasksqueue_graceful_stop && tasksqueue_log "Stopping gracefully" || tasksqueue_log "Stopping gracefully failed"' SIGTERM
-
-# If $1 is specified string, read task from pipe and exit
-if [ "$1" = "receive-task" ]
-then
-	tasksqueue_receive_task 2
-	RECEIVE_STATUS=$?
-	if [ $RECEIVE_STATUS ]
-	then
-		tasksqueue_log "Receiving task ok" 
-	else
-		tasksqueue_log "Receiving task failed ($RECEIVE_STATUS)"
-	fi
-
-	exit 0
-fi
 
 # Log about starting
 tasksqueue_log "Starting"
@@ -69,25 +44,28 @@ tasksqueue_log "Starting"
 # Tasks loop
 while [ -z "$GRACEFUL_STOP" ]
 do
-	# Unset previous task
-	unset -v TASK
-
-	# Read new task from tasks file descriptor
-	read -r TASK < $TASKSQUEUE_TASKS_FILE
-
-	# If task is not empty
-	if [ -n "$TASK" ]
+	# Read new task from tasks file database
+	if read -r TASK < $TASKSQUEUE_TASKS_FILE && [ -n "$TASK" ] 
 	then
-		# Log action 
-		tasksqueue_log "Sending base64 task '$TASK' to pipe"
-
 		# Send new task to pipe
-		echo $TASK > $TASKSQUEUE_TRANSMIT_PIPE
-
-		# Remove task from tasks file
-		$SED -i 1d $TASKSQUEUE_TASKS_FILE
+		if echo $TASK > $TASKSQUEUE_TASKS_PIPE
+		then
+			tasksqueue_log "Sending base64 task '$TASK' to pipe ok"
+		
+			# Obtain write lock
+			{
+				# Read new task from tasks file database
+				if $FLOCK -x 200 && $SED -i 1d $TASKSQUEUE_TASKS_FILE
+				then
+					tasksqueue_log "Removing base64 task '$TASK' from tasks database ok"
+				else
+					tasksqueue_log "Removing base64 task '$TASK' from tasks database failed" 
+				fi
+			} 200<"$TASKSQUEUE_TASKS_LOCK"
+		else
+			tasksqueue_log "Sending base64 task '$TASK' to pipe failed"
+		fi
 	else
-		# Sleep if no task received
 		$SLEEP 1s
 	fi
 done

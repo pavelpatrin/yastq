@@ -6,18 +6,6 @@
 # SCRIPT_DIR=/absolute/path/to/script/directory
 SCRIPT_DIR="/home/pavelpat/Projects/yastq"
 
-# Common part of all scripts
-# SCRIPT_WORKER=/absolute/path/to/script/directory/common.sh
-SCRIPT_COMMON=$SCRIPT_DIR/common.sh
-
-# Worker script
-# SCRIPT_WORKER=/absolute/path/to/script/directory/worker.sh
-SCRIPT_WORKER=$SCRIPT_DIR/worker.sh
-
-# Tasksqueue script
-# SCRIPT_TASKSQUEUE=/absolute/path/to/script/directory/tasksqueue.sh
-SCRIPT_TASKSQUEUE=$SCRIPT_DIR/tasksqueue.sh
-
 # Max of parallels tasks (detected by count cpu cores)
 # MAX_PARALLEL_SHEDULES=N
 MAX_PARALLEL_SHEDULES=$(fgrep -c processor /proc/cpuinfo)

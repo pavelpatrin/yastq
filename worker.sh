@@ -1,19 +1,29 @@
 #!/bin/bash
 
 # Include config file
-if [ -r ~/.yastq.conf ]; then source ~/.yastq.conf
-elif [ -r /etc/yastq.conf ]; then source /etc/yastq.conf
-else echo "Config file not found"; exit 1; fi
+if [ -r "$HOME/.yastq.conf" ]
+then 
+	source "$HOME/.yastq.conf"
+elif [ -r "/etc/yastq.conf" ]
+then 
+	source "/etc/yastq.conf"
+else 
+	echo "Config file not found"
+	exit 1
+fi
 
-# Check existance of common code
-if ! source $SCRIPT_COMMON; then echo "Common file not found"; exit 1; fi
+# Include common code
+if ! source "$SCRIPT_DIR/common.sh"
+	then echo "Error including common file"
+	exit 1
+fi
 
 ##
 ## Sends message to log
 ##
 worker_log() 
 {
-	echo "$($DATE +'%F %T') (worker $$) $1" >> $LOG_WORKER
+	echo "$($DATE +'%F %T') (worker $$) $1" >> $WORKER_LOG_FILE
 }
 
 ##
@@ -50,7 +60,7 @@ do
 	unset -v TASK_INFO
 
 	# Read next task with 1 sec timeout
-	read -t 1 -a TASK_INFO <> $TASKSQUEUE_TRANSMIT_PIPE
+	read -t 1 -a TASK_INFO <> $TASKSQUEUE_TASKS_PIPE
 
 	# If task info array has > 0 size
 	if [ "${#TASK_INFO[@]}" -gt 0 ]

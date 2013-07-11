@@ -7,7 +7,7 @@
 ## Installation:
 1. cd yastq
 2. chmod u+rwX . -R && chmod g-rwx . -R && chmod o-rwx . -R
-3. chmod u+x worker.sh manager.sh worker.sh
+3. chmod u+x dashboard.sh tasksqueue.sh worker.sh
 4. copy yastq.conf.sample to ~/.yastq.conf or to /etc/yastq.conf
 
 ## Use:
