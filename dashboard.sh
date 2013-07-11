@@ -53,7 +53,6 @@ workers_pids()
 ##
 workers_start() 
 {
-	unset -v RESULT
 	local WORKERS_COUNT=$1
 
 	if workers_pids
@@ -81,8 +80,6 @@ workers_start()
 ##
 workers_stop() 
 {
-	unset -v RESULT
-
 	if workers_pids
 	then
 		local WORKERS_PIDS=$RESULT
@@ -133,8 +130,6 @@ tasksqueue_pid()
 ##
 tasksqueue_start()
 {
-	unset -v RESULT
-
 	if tasksqueue_pid
 	then
 		return 1
@@ -150,8 +145,6 @@ tasksqueue_start()
 ##
 tasksqueue_stop()
 {
-	unset -v RESULT
-
 	if tasksqueue_pid
 	then
 		local TASKSQUEUE_PID=$RESULT
@@ -172,7 +165,6 @@ tasksqueue_stop()
 ##
 tasksqueue_add_task() 
 {
-	unset -v RESULT
 	local TASK="$(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0)"
 
 	if tasksqueue_pid
@@ -197,21 +189,52 @@ shift
 case $ACTION in 
 	"start")
 		dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers..."
-		workers_start $MAX_PARALLEL_SHEDULES && dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers ok" || dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers failed ($?)"
+		if workers_start $MAX_PARALLEL_SHEDULES
+		then
+			dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers ok" 
+		else 
+			dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers failed ($?)"
+		fi
 
 		dashboard_say_log "Staring tasks queue..."
-		tasksqueue_start && dashboard_say_log "Staring tasks queue ok" || dashboard_say_log "Staring tasks queue failed ($?)"
+		if tasksqueue_start 
+		then
+			dashboard_say_log "Staring tasks queue ok" 
+		else 
+			dashboard_say_log "Staring tasks queue failed ($?)"
+		fi
 		;;
 	"stop")
 		dashboard_say_log "Stopping $MAX_PARALLEL_SHEDULES workers..."
-		workers_stop && dashboard_say_log "Stopping $MAX_PARALLEL_SHEDULES workers ok" || dashboard_say_log "Stopping $MAX_PARALLEL_SHEDULES workers failed ($?)"
+		if workers_stop 
+		then
+			dashboard_say_log "Stopping $MAX_PARALLEL_SHEDULES workers ok" 
+		else
+			dashboard_say_log "Stopping $MAX_PARALLEL_SHEDULES workers failed ($?)"
+		fi
 
 		dashboard_say_log "Stopping tasks queue..."
-		tasksqueue_stop && dashboard_say_log "Stopping tasks queue ok" || dashboard_say_log "Stopping tasks queue failed ($?)"
+		if tasksqueue_stop 
+		then 
+			dashboard_say_log "Stopping tasks queue ok" 
+		else
+			dashboard_say_log "Stopping tasks queue failed ($?)"
+		fi
 		;;
 	"status")
-		workers_pids && dashboard_say "Workers are running" || dashboard_say "Workers are not running"
-		tasksqueue_pid	&& dashboard_say "Tasks queue is running" || dashboard_say "Tasks queue is not running"
+		if workers_pids 
+		then 
+			dashboard_say "Workers are running" 
+		else 
+			dashboard_say "Workers are not running"
+		fi
+
+		if tasksqueue_pid
+		then 
+			dashboard_say "Tasks queue is running" 
+		else
+			dashboard_say "Tasks queue is not running"
+		fi
 		;;
 	"add-task")
 		SUCCESS=$FALSE
@@ -244,7 +267,12 @@ case $ACTION in
 		if [ -n "$TASK" ]
 		then
 			dashboard_say_log "Adding task $TASK with SUCC $SUCCESS and FAIL $FAIL" 
-			tasksqueue_add_task "$TASK" "$SUCCESS" "$FAIL" && dashboard_say_log "Adding task OK" || dashboard_say_log "Adding task FAIL ($?)"
+			if tasksqueue_add_task "$TASK" "$SUCCESS" "$FAIL" 
+			then
+				dashboard_say_log "Adding task OK" 
+			else
+				dashboard_say_log "Adding task FAIL ($?)"
+			fi
 		else
 			dashboard_say_log "Adding task FAIL (task is empty)" 
 		fi
