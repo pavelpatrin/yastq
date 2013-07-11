@@ -177,6 +177,7 @@ tasksqueue_add_task()
 		# Send task to stopped tasksqueue
 		$SCRIPT_TASKSQUEUE receive-task >/dev/null &
 		echo $TASK > $TASKSQUEUE_RECEIVE_PIPE
+		wait $!
 	fi
 
 	return 0
