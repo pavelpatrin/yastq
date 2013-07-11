@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Check that running in bash
+if [ -z $BASH ]; then echo "This script could run only in bash"; exit 1; fi
+
 # Include config file
 if [ -r ~/.yastq.conf ]; then source ~/.yastq.conf
 elif [ -r /etc/yastq.conf ]; then source /etc/yastq.conf

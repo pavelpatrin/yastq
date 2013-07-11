@@ -23,7 +23,7 @@ worker_run_task()
 {
 	local TASK=$1
 
-	eval "$TASK &"
+	$BASH -c "$TASK" &
 	wait $!
 	return $?
 }
