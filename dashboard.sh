@@ -49,7 +49,7 @@ workers_pids()
 
 	local WORKERS_PIDS
 	read -r WORKERS_PIDS < "$WORKER_PID_FILE"
-	if ! "$PS" -p "$WORKERS_PIDS" 2>/dev/null >/dev/null
+	if ! "$PS" -p $WORKERS_PIDS 2>/dev/null >/dev/null
 	then
 		return 2
 	fi
@@ -126,7 +126,7 @@ tasksqueue_pid()
 	local TASKSQUEUE_PID
 	read -r TASKSQUEUE_PID < "$TASKSQUEUE_PID_FILE"
 
-	if ! "$PS" -p "$TASKSQUEUE_PID" 2>/dev/null >/dev/null
+	if ! "$PS" -p $TASKSQUEUE_PID 2>/dev/null >/dev/null
 	then
 		return 2
 	fi
