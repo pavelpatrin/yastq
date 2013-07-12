@@ -62,7 +62,7 @@ do
 	# Obtain exclusive lock
 	{
 		"$FLOCK" -x 200
-		read -t 1 -a TASK_INFO <> "$TASKSQUEUE_TASKS_PIPE"
+		read -t 0.1 -a TASK_INFO <> "$TASKSQUEUE_TASKS_PIPE"
 	} 200<"$TASKSQUEUE_TASKS_PIPE_LOCK"
 
 	# If read was not success
