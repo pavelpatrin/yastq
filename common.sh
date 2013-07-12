@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Check that running in bash
-if [ -z $BASH ]
+if [ -z "$BASH" ]
 then 
 	echo "This script could run only in bash"
 	exit 1
@@ -162,34 +162,34 @@ TASKSQUEUE_LOG_FILE=$SCRIPT_DIR/log/tasksqueue.log
 # Create tasksqueue files
 if ! [ -e "$TASKSQUEUE_TASKS_FILE" ]
 then 
-	$TOUCH $TASKSQUEUE_TASKS_FILE
+	"$TOUCH" "$TASKSQUEUE_TASKS_FILE"
 fi
 
 if ! [ -e "$TASKSQUEUE_TASKS_FILE_LOCK" ]
 then 
-	$TOUCH $TASKSQUEUE_TASKS_FILE_LOCK
+	"$TOUCH" "$TASKSQUEUE_TASKS_FILE_LOCK"
 fi
 
 if ! [ -e "$TASKSQUEUE_TASKS_PIPE" ]
 then 
-	$MKFIFO $TASKSQUEUE_TASKS_PIPE
+	"$MKFIFO" "$TASKSQUEUE_TASKS_PIPE"
 fi
 
 if ! [ -e "$TASKSQUEUE_TASKS_PIPE_LOCK" ]
 then 
-	$TOUCH $TASKSQUEUE_TASKS_PIPE_LOCK
+	"$TOUCH" "$TASKSQUEUE_TASKS_PIPE_LOCK"
 fi
 
 # Create log files
 if ! [ -e "$LOG_TASKSQUEUE" ]
 then 
-	$TOUCH $TASKSQUEUE_LOG_FILE
+	"$TOUCH" "$TASKSQUEUE_LOG_FILE"
 fi
 if ! [ -e "$LOG_DASHBOARD" ]
 then 
-	$TOUCH $DASHBOARD_LOG_FILE
+	"$TOUCH" "$DASHBOARD_LOG_FILE"
 fi
 if ! [ -e "$LOG_WORKER" ]
 then 
-	$TOUCH $WORKER_LOG_FILE
+	"$TOUCH" "$WORKER_LOG_FILE"
 fi

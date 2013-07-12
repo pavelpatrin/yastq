@@ -24,7 +24,7 @@ fi
 dashboard_say_log() 
 {
 	echo "$($DATE +'%F %T') (dashboard) $1"
-	echo "$($DATE +'%F %T') (dashboard) $1" >> $DASHBOARD_LOG_FILE
+	echo "$($DATE +'%F %T') (dashboard) $1" >> "$DASHBOARD_LOG_FILE"
 }
 
 ##
@@ -48,8 +48,8 @@ workers_pids()
 	fi
 
 	local WORKERS_PIDS
-	read -r WORKERS_PIDS < $WORKER_PID_FILE
-	if ! $PS -p $WORKERS_PIDS 2>/dev/null >/dev/null
+	read -r WORKERS_PIDS < "$WORKER_PID_FILE"
+	if ! "$PS" -p "$WORKERS_PIDS" 2>/dev/null >/dev/null
 	then
 		return 2
 	fi
@@ -74,14 +74,14 @@ workers_start()
 	for ((i=1; i<=$WORKERS_COUNT; i++))
 	do
 		# Start worker with nohup
-		$NOHUP $WORKER_SCRIPT 2>/dev/null >/dev/null &
+		"$NOHUP" "$WORKER_SCRIPT" 2>/dev/null >/dev/null &
 
 		# Save worker pid
 		WORKERS_PIDS="$WORKERS_PIDS $!"
 	done
 
 	# Store workers pids into pidfile
-	echo $WORKERS_PIDS > $WORKER_PID_FILE
+	echo $WORKERS_PIDS > "$WORKER_PID_FILE"
 	return 0
 }
 
@@ -92,19 +92,19 @@ workers_stop()
 {
 	if workers_pids
 	then
-		local WORKERS_PIDS=$RESULT
+		local WORKERS_PIDS="$RESULT"
 
 		# Sending term signal to workers
-		$KILL -s SIGTERM $WORKERS_PIDS >/dev/null
+		"$KILL" -s SIGTERM $WORKERS_PIDS >/dev/null
 
 		# Waiting for workers exiting
-		while $PS -p $WORKERS_PIDS >/dev/null
+		while "$PS" -p $WORKERS_PIDS >/dev/null
 		do
-		    $SLEEP 1s
+		    "$SLEEP" 0.1s
 		done
 		
 		# Remove pids file
-		$RM -f $WORKER_PID_FILE
+		"$RM" -f "$WORKER_PID_FILE"
 		return 0
 	fi
 	
@@ -124,9 +124,9 @@ tasksqueue_pid()
 	fi
 
 	local TASKSQUEUE_PID
-	read -r TASKSQUEUE_PID < $TASKSQUEUE_PID_FILE
+	read -r TASKSQUEUE_PID < "$TASKSQUEUE_PID_FILE"
 
-	if ! $PS -p $TASKSQUEUE_PID 2>/dev/null >/dev/null
+	if ! "$PS" -p "$TASKSQUEUE_PID" 2>/dev/null >/dev/null
 	then
 		return 2
 	fi
@@ -145,8 +145,8 @@ tasksqueue_start()
 		return 1
 	fi
 
-	$NOHUP $TASKSQUEUE_SCRIPT 2>/dev/null >/dev/null &
-	echo $! > $TASKSQUEUE_PID_FILE
+	"$NOHUP" "$TASKSQUEUE_SCRIPT" 2>/dev/null >/dev/null &
+	echo $! > "$TASKSQUEUE_PID_FILE"
 	return 0
 }
 
@@ -160,10 +160,10 @@ tasksqueue_stop()
 		local TASKSQUEUE_PID=$RESULT
 
 		# Sending term signal to workers
-		$KILL -s SIGTERM $TASKSQUEUE_PID >/dev/null
+		"$KILL" -s SIGTERM $TASKSQUEUE_PID >/dev/null
 
 		# Remove pids file
-		$RM -f $TASKSQUEUE_PID_FILE
+		"$RM" -f "$TASKSQUEUE_PID_FILE"
 		return 0
 	fi
 
@@ -179,8 +179,8 @@ tasksqueue_add_task()
 
 	# Obtain exclusive lock
 	{
-		$FLOCK -x 200
-		echo $TASK >> $TASKSQUEUE_TASKS_FILE
+		"$FLOCK" -x 200
+		echo $TASK >> "$TASKSQUEUE_TASKS_FILE"
 	} 200<"$TASKSQUEUE_TASKS_FILE_LOCK"
 
 	if [ $? ]
@@ -198,7 +198,7 @@ shift
 case $ACTION in 
 	"start")
 		dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers..."
-		if workers_start $MAX_PARALLEL_SHEDULES
+		if workers_start "$MAX_PARALLEL_SHEDULES"
 		then
 			dashboard_say_log "Staring $MAX_PARALLEL_SHEDULES workers ok" 
 		else 

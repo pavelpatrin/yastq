@@ -23,7 +23,7 @@ fi
 ##
 worker_log() 
 {
-	echo "$($DATE +'%F %T') (worker $$) $1" >> $WORKER_LOG_FILE
+	echo "$($DATE +'%F %T') (worker $$) $1" >> "$WORKER_LOG_FILE"
 }
 
 ##
@@ -33,7 +33,7 @@ worker_run_task()
 {
 	local TASK=$1
 
-	$BASH -c "$TASK" &
+	"$BASH" -c "$TASK" &
 	wait $!
 	return $?
 }
@@ -61,8 +61,8 @@ do
 
 	# Obtain exclusive lock
 	{
-		$FLOCK -x 200
-		read -t 1 -a TASK_INFO <> $TASKSQUEUE_TASKS_PIPE
+		"$FLOCK" -x 200
+		read -t 1 -a TASK_INFO <> "$TASKSQUEUE_TASKS_PIPE"
 	} 200<"$TASKSQUEUE_TASKS_PIPE_LOCK"
 
 	# If read was not success
@@ -71,13 +71,13 @@ do
 		continue
 	fi
 
-	# If read was not empty
+	# If read was empty
 	if ! [ "${#TASK_INFO[@]}" -gt 0 ] 
 	then
 		continue
 	fi
 
-	# Save aplitted into variables
+	# Save task info into variables
 	TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
 	SUCC=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
 	FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
@@ -87,10 +87,10 @@ do
 	if worker_run_task "$TASK"
 	then
 		worker_log "Running task finished with code $?: $TASK. Executing SUCC command: $SUCC"
-		worker_run_task $SUCC
+		worker_run_task "$SUCC"
 	else 
 		worker_log "Running task finished with code $?: $TASK. Executing FAIL command: $FAIL"
-		worker_run_task $FAIL
+		worker_run_task "$FAIL"
 	fi
 done
 

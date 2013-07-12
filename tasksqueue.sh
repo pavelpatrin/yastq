@@ -23,7 +23,7 @@ fi
 ##
 tasksqueue_log() 
 {
-	echo "$($DATE +'%F %T') (tasksqueue $$) $1" >> $TASKSQUEUE_LOG_FILE
+	echo "$($DATE +'%F %T') (tasksqueue $$) $1" >> "$TASKSQUEUE_LOG_FILE"
 }
 
 ##
@@ -46,36 +46,43 @@ while [ -z "$GRACEFUL_STOP" ]
 do
 	# Obtain exclusive lock
 	{
-		$FLOCK -x 200
-		read -r TASK < $TASKSQUEUE_TASKS_FILE
+		"$FLOCK" -x 200
+		read -r TASK < "$TASKSQUEUE_TASKS_FILE"
 	} 200<"$TASKSQUEUE_TASKS_FILE_LOCK"
 
-	# Read new task from tasks file database
-	if [ $? ] && [ -n "$TASK" ] 
+	# If read was not success
+	if ! [ $? ]
 	then
-		# Send new task to worker over pipe
-		if echo $TASK > $TASKSQUEUE_TASKS_PIPE
-		then
-			tasksqueue_log "Sending base64 task '$TASK' to pipe ok"
-		
-			# Obtain exclusive lock
-			{
-				$FLOCK -x 200
-				$SED -i 1d $TASKSQUEUE_TASKS_FILE
-			} 200<"$TASKSQUEUE_TASKS_FILE_LOCK"
+		continue
+	fi
 
-			# If row was removed
-			if [ $? ]
-			then
-				tasksqueue_log "Removing base64 task '$TASK' from tasks database ok"
-			else
-				tasksqueue_log "Removing base64 task '$TASK' from tasks database failed" 
-			fi
+	# If read was empty
+	if ! [ -n "$TASK" ]
+	then
+		"$SLEEP" 0.1s
+		continue
+	fi
+
+	# Send new task to workers over pipe
+	if echo "$TASK" > "$TASKSQUEUE_TASKS_PIPE"
+	then
+		tasksqueue_log "Sending base64 task '$TASK' to pipe ok"
+	
+		# Obtain exclusive lock
+		{
+			"$FLOCK" -x 200
+			"$SED" -i 1d "$TASKSQUEUE_TASKS_FILE"
+		} 200<"$TASKSQUEUE_TASKS_FILE_LOCK"
+
+		# If row was removed
+		if [ $? ]
+		then
+			tasksqueue_log "Removing base64 task '$TASK' from tasks database ok"
 		else
-			tasksqueue_log "Sending base64 task '$TASK' to pipe failed"
+			tasksqueue_log "Removing base64 task '$TASK' from tasks database failed" 
 		fi
 	else
-		$SLEEP 1s
+		tasksqueue_log "Sending base64 task '$TASK' to pipe failed"
 	fi
 done
 
