@@ -177,10 +177,18 @@ tasksqueue_add_task()
 {
 	local TASK="$(echo $1 | $BASE64 -w 0) $(echo $2 | $BASE64 -w 0) $(echo $3 | $BASE64 -w 0)"
 
-	# Obtain write lock
+	# Obtain exclusive lock
 	{
-		$FLOCK -x 200 && echo $TASK >> $TASKSQUEUE_TASKS_FILE
-	} 200<"$TASKSQUEUE_TASKS_LOCK"
+		$FLOCK -x 200
+		echo $TASK >> $TASKSQUEUE_TASKS_FILE
+	} 200<"$TASKSQUEUE_TASKS_FILE_LOCK"
+
+	if [ $? ]
+	then
+		return 0
+	fi
+
+	return 1	
 }
 
 # Currect action

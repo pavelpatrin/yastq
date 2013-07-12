@@ -44,24 +44,33 @@ tasksqueue_log "Starting"
 # Tasks loop
 while [ -z "$GRACEFUL_STOP" ]
 do
+	# Obtain exclusive lock
+	{
+		$FLOCK -x 200
+		read -r TASK < $TASKSQUEUE_TASKS_FILE
+	} 200<"$TASKSQUEUE_TASKS_FILE_LOCK"
+
 	# Read new task from tasks file database
-	if read -r TASK < $TASKSQUEUE_TASKS_FILE && [ -n "$TASK" ] 
+	if [ $? ] && [ -n "$TASK" ] 
 	then
-		# Send new task to pipe
+		# Send new task to worker over pipe
 		if echo $TASK > $TASKSQUEUE_TASKS_PIPE
 		then
 			tasksqueue_log "Sending base64 task '$TASK' to pipe ok"
 		
-			# Obtain write lock
+			# Obtain exclusive lock
 			{
-				# Read new task from tasks file database
-				if $FLOCK -x 200 && $SED -i 1d $TASKSQUEUE_TASKS_FILE
-				then
-					tasksqueue_log "Removing base64 task '$TASK' from tasks database ok"
-				else
-					tasksqueue_log "Removing base64 task '$TASK' from tasks database failed" 
-				fi
-			} 200<"$TASKSQUEUE_TASKS_LOCK"
+				$FLOCK -x 200
+				$SED -i 1d $TASKSQUEUE_TASKS_FILE
+			} 200<"$TASKSQUEUE_TASKS_FILE_LOCK"
+
+			# If row was removed
+			if [ $? ]
+			then
+				tasksqueue_log "Removing base64 task '$TASK' from tasks database ok"
+			else
+				tasksqueue_log "Removing base64 task '$TASK' from tasks database failed" 
+			fi
 		else
 			tasksqueue_log "Sending base64 task '$TASK' to pipe failed"
 		fi

@@ -145,10 +145,13 @@ TASKSQUEUE_SCRIPT=$SCRIPT_DIR/tasksqueue.sh
 TASKSQUEUE_TASKS_FILE=$SCRIPT_DIR/db/tasks
 
 # Tasks queue tasks lock
-TASKSQUEUE_TASKS_LOCK=$SCRIPT_DIR/lock/tasks
+TASKSQUEUE_TASKS_FILE_LOCK=$SCRIPT_DIR/lock/tasksfile
 
 # Tasks queue pipe to transmit tasks
 TASKSQUEUE_TASKS_PIPE=$SCRIPT_DIR/pipe/tasksqueue
+
+# Tasks queue pipe to transmit tasks lock
+TASKSQUEUE_TASKS_PIPE_LOCK=$SCRIPT_DIR/lock/taskspipe
 
 # Tasks queue pid file
 TASKSQUEUE_PID_FILE=$SCRIPT_DIR/pid/tasksqueue.pid
@@ -162,14 +165,19 @@ then
 	$TOUCH $TASKSQUEUE_TASKS_FILE
 fi
 
-if ! [ -e "$TASKSQUEUE_TASKS_LOCK" ]
+if ! [ -e "$TASKSQUEUE_TASKS_FILE_LOCK" ]
 then 
-	$TOUCH $TASKSQUEUE_TASKS_LOCK
+	$TOUCH $TASKSQUEUE_TASKS_FILE_LOCK
 fi
 
 if ! [ -e "$TASKSQUEUE_TASKS_PIPE" ]
 then 
 	$MKFIFO $TASKSQUEUE_TASKS_PIPE
+fi
+
+if ! [ -e "$TASKSQUEUE_TASKS_PIPE_LOCK" ]
+then 
+	$TOUCH $TASKSQUEUE_TASKS_PIPE_LOCK
 fi
 
 # Create log files

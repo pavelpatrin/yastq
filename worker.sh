@@ -59,32 +59,38 @@ do
 	# Clear previous task
 	unset -v TASK_INFO
 
-	# Read next task with 1 sec timeout
-	read -t 1 -a TASK_INFO <> $TASKSQUEUE_TASKS_PIPE
+	# Obtain exclusive lock
+	{
+		$FLOCK -x 200
+		read -t 1 -a TASK_INFO <> $TASKSQUEUE_TASKS_PIPE
+	} 200<"$TASKSQUEUE_TASKS_PIPE_LOCK"
 
-	# If task info array has > 0 size
-	if [ "${#TASK_INFO[@]}" -gt 0 ]
+	# If read was not success
+	if ! [ $? ]
 	then
-		# Save aplitted into variables
-		TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
-		SUCC=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
-		FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
+		continue
+	fi
 
-		# Log task start
-		worker_log "Running task: $TASK"
+	# If read was not empty
+	if ! [ "${#TASK_INFO[@]}" -gt 0 ] 
+	then
+		continue
+	fi
 
-		# Run task
-		worker_run_task "$TASK"
-		CODE=$?
+	# Save aplitted into variables
+	TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
+	SUCC=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
+	FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
 
-		if [ 0 = "$CODE" ]
-		then
-			worker_log "Running task finished with code $CODE: $TASK. Executing SUCC command: $SUCC"
-			worker_run_task $SUCC
-		else 
-			worker_log "Running task finished with code $CODE: $TASK. Executing FAIL command: $FAIL"
-			worker_run_task $FAIL
-		fi
+	# Run task
+	worker_log "Running task: $TASK"
+	if worker_run_task "$TASK"
+	then
+		worker_log "Running task finished with code $?: $TASK. Executing SUCC command: $SUCC"
+		worker_run_task $SUCC
+	else 
+		worker_log "Running task finished with code $?: $TASK. Executing FAIL command: $FAIL"
+		worker_run_task $FAIL
 	fi
 done
 
