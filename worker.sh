@@ -84,12 +84,15 @@ do
 
 	# Run task
 	worker_log "Running task: $TASK"
+	TASK_RETURN=$?
+	worker_log "Running task finished with code $?: $TASK"
+
 	if worker_run_task "$TASK"
 	then
-		worker_log "Running task finished with code $?: $TASK. Executing SUCC command: $SUCC"
+		worker_log "Executing SUCC command: $SUCC"
 		worker_run_task "$SUCC"
 	else 
-		worker_log "Running task finished with code $?: $TASK. Executing FAIL command: $FAIL"
+		worker_log "Executing FAIL command: $FAIL"
 		worker_run_task "$FAIL"
 	fi
 done
