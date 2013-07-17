@@ -13,9 +13,16 @@ else
 fi
 
 # Include common code
-if ! source "$SCRIPT_DIR/common.sh"
-	then echo "Error including common file"
+if ! source "$COMMON_SCRIPT_FILE"
+then 
+	echo "Error including common file"
 	exit 1
+fi
+
+#
+if ! source "$SOURCE_DIR/tasksqueue.sh"
+then
+	
 fi
 
 ##

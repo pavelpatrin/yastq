@@ -6,6 +6,54 @@
 # SCRIPT_DIR=/absolute/path/to/script/directory
 SCRIPT_DIR="/home/pavelpat/Projects/yastq"
 
-# Max of parallels tasks (detected by count cpu cores)
-# MAX_PARALLEL_SHEDULES=N
-MAX_PARALLEL_SHEDULES=$(fgrep -c processor /proc/cpuinfo)
+# Logging level
+# Bitwise mask of log levels:
+# 1  - Error
+# 2  - Warn
+# 4  - Info
+# 8  - Debug
+# 16 - Trace
+LOG_LEVEL=$(( 1 | 2 | 4 | 8 | 16 ))
+
+# Parallels tasks in same time (detected by count cpu cores)
+# PARALLEL_TASKS=N
+PARALLEL_TASKS=$(fgrep -c processor /proc/cpuinfo)
+
+# Script parts directories
+# Don`t touch it
+LOG_DIR=$SCRIPT_DIR/log
+PID_DIR=$SCRIPT_DIR/pid
+LOCK_DIR=$SCRIPT_DIR/lock
+PIPE_DIR=$SCRIPT_DIR/pipe
+TASK_DIR=$SCRIPT_DIR/task
+
+# Script part files
+# Don`t touch it
+COMMON_SCRIPT_FILE=$SCRIPT_DIR/common.sh
+WORKER_SCRIPT_FILE=$SCRIPT_DIR/worker.sh
+DASHBOARD_SCRIPT_FILE=$SCRIPT_DIR/dashboard.sh
+TASKSQUEUE_SCRIPT_FILE=$SCRIPT_DIR/tasksqueue.sh
+
+# Path to workers pid file
+# Don`t touch it
+WORKERS_PID_FILE=$PID_DIR/workers.pid
+
+# Path to tasksqueue pid file
+# Don`t touch it
+TASKSQUEUE_PID_FILE=$PID_DIR/tasksqueue.pid
+
+# Path to delayed tasks database file
+# Don`t touch it
+TASKS_DELAYED_FILE=$TASK_DIR/delayed
+
+# Path to delayed tasks database lock file
+# Don`t touch it
+TASKS_DELAYED_FILE_LOCK=$LOCK_DIR/delayed.lock
+
+# Path to transport pipe file
+# Don`t touch it
+TASKS_TRANSPORT_PIPE=$PIPE_DIR/transport
+
+# Path to transport pipe lock file 
+# Don`t touch it
+TASKS_TRANSPORT_PIPE_LOCK=$LOCK_DIR/transport.lock

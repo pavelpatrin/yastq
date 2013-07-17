@@ -1,195 +1,107 @@
 #!/bin/bash
 
-# Check that running in bash
-if [ -z "$BASH" ]
-then 
-	echo "This script could run only in bash"
-	exit 1
-fi
+##
+## Does all common job
+##
+## Exits with codes:
+##	1 - configuration file errors
+##	2 - dependencies errors
+##
 
-# Check configuration options
-if ! [ -d "$SCRIPT_DIR" ]
-then 
-	echo "Error: SCRIPT_DIR is not setted propertly in configuration file."
-	exit 1
-fi
+# Config check (logging level)
+[ -n "$LOG_LEVEL" ] || ! [[ "$LOG_LEVEL" =~ ^[[:digit:]]+$ ]] || { echo "Error: config directive LOG_LEVEL not defined correctly"; exit 1;}
 
-if ! [ -n "$MAX_PARALLEL_SHEDULES" ]
-then 
-	echo "Error: MAX_PARALLEL_SHEDULES is not setted propertly in configuration file."
-	exit 1
-fi
+# Config check (parallel tasks)
+[ -n "$PARALLEL_TASKS" ] || ! [[ "$PARALLEL_TASKS" =~ ^[[:digit:]]+$ ]] || { echo "Error: config directive PARALLEL_TASKS not defined correctly"; exit 1;}
 
-# Get and check utilities paths
-WC=`type -P wc`
-if ! [ -x "$WC" ]
-then 
-	echo "Error: wc is not found"
-	exit 1
-fi
+# Config check (script parts directories)
+[ -n "$SCRIPT_DIR" -a -d "$SCRIPT_DIR" -a -w "$SCRIPT_DIR" -a -x "$SCRIPT_DIR" ] || { echo "Error: config directive SCRIPT_DIR not defined correctly"; exit 1;}
+[ -n "$LOCK_DIR" -a -d "$LOCK_DIR" -a -w "$LOCK_DIR" -a -x "$LOCK_DIR" ] || { echo "Error: config directive LOCK_DIR not defined correctly"; exit 1;}
+[ -n "$PIPE_DIR" -a -d "$PIPE_DIR" -a -w "$PIPE_DIR" -a -x "$PIPE_DIR" ] || { echo "Error: config directive PIPE_DIR not defined correctly"; exit 1;} 
+[ -n "$TASK_DIR" -a -d "$TASK_DIR" -a -w "$TASK_DIR" -a -x "$TASK_DIR" ] || { echo "Error: config directive TASK_DIR not defined correctly"; exit 1;}
+[ -n "$LOG_DIR" -a -d "$LOG_DIR" -a -w "$LOG_DIR" -a -x "$LOG_DIR" ] || { echo "Error: config directive LOG_DIR not defined correctly"; exit 1;}
+[ -n "$PID_DIR" -a -d "$PID_DIR" -a -w "$PID_DIR" -a -x "$PID_DIR" ] || { echo "Error: config directive PID_DIR not defined correctly"; exit 1;}
 
-PS=`type -P ps`
-if ! [ -x "$PS" ]
-then 
-	echo "Error: ps is not found"
-	exit 1
-fi
+# Config check (script part files)
+[ -n "$COMMON_SCRIPT_FILE" -o -e "$COMMON_SCRIPT_FILE" ] || { echo "Error: config directive COMMON_SCRIPT_FILE not defined correctly"; exit 1;}
+[ -n "$WORKER_SCRIPT_FILE" -o -e "$WORKER_SCRIPT_FILE" -o  -x "$WORKER_SCRIPT_FILE" ] || { echo "Error: config directive WORKER_SCRIPT_FILE not defined correctly"; exit 1;}
+[ -n "$DASHBOARD_SCRIPT_FILE" -o -e "$DASHBOARD_SCRIPT_FILE" -o  -x "$DASHBOARD_SCRIPT_FILE" ] || { echo "Error: config directive DASHBOARD_SCRIPT_FILE not defined correctly"; exit 1;}
+[ -n "$TASKSQUEUE_SCRIPT_FILE" -o -e "$TASKSQUEUE_SCRIPT_FILE" -o  -x "$TASKSQUEUE_SCRIPT_FILE" ] || { echo "Error: config directive TASKSQUEUE_SCRIPT_FILE not defined correctly"; exit 1;}
 
-RM=`type -P rm`
-if ! [ -x "$RM" ]
-then 
-	echo "Error: rm is not found"
-	exit 1
-fi
+# Config check (script files)
+[ -n "$WORKERS_PID_FILE" ] || { echo "Error: config directive WORKERS_PID_FILE not defined correctly"; exit 1;}
+[ -n "$TASKSQUEUE_PID_FILE" ] || { echo "Error: config directive TASKSQUEUE_PID_FILE not defined correctly"; exit 1;}
+[ -n "$TASKS_DELAYED_FILE" ] || { echo "Error: config directive TASKS_DELAYED_FILE not defined correctly"; exit 1;}
+[ -n "$TASKS_DELAYED_FILE_LOCK" ] || { echo "Error: config directive TASKS_DELAYED_FILE_LOCK not defined correctly"; exit 1;}
+[ -n "$TASKS_TRANSPORT_PIPE" ] || { echo "Error: config directive TASKS_TRANSPORT_PIPE not defined correctly"; exit 1;}
+[ -n "$TASKS_TRANSPORT_PIPE_LOCK" ] || { echo "Error: config directive TASKS_TRANSPORT_PIPE_LOCK not defined correctly"; exit 1;}
 
-CAT=`type -P cat`
-if ! [ -x "$CAT" ]
-then 
-	echo "Error: cat is not found"
-	exit 1
-fi
+# Dependencies check
+WC=$(type -P wc) || { echo "Error: wc not found"; exit 2;}
+PS=$(type -P ps) || { echo "Error: ps not found"; exit 2;}
+RM=$(type -P rm) || { echo "Error: rm not found"; exit 2;}
+CAT=$(type -P cat) || { echo "Error: cat not found"; exit 2;}
+SED=$(type -P sed) || { echo "Error: sed not found"; exit 2;}
+DATE=$(type -P date) || { echo "Error: date not found"; exit 2;}
+KILL=$(type -P kill) || { echo "Error: kill not found"; exit 2;}
+GREP=$(type -P grep) || { echo "Error: grep not found"; exit 2;}
+TOUCH=$(type -P touch) || { echo "Error: touch not found"; exit 2;}
+MKDIR=$(type -P mkdir) || { echo "Error: mkdir not found"; exit 2;}
+NOHUP=$(type -P nohup) || { echo "Error: nohup not found"; exit 2;}
+SLEEP=$(type -P sleep) || { echo "Error: sleep not found"; exit 2;}
+FLOCK=$(type -P flock) || { echo "Error: flock not found"; exit 2;}
+FALSE=$(type -P false) || { echo "Error: false not found"; exit 2;}
+BASE64=$(type -P base64) || { echo "Error: base64 not found"; exit 2;}
+MKFIFO=$(type -P mkfifo) || { echo "Error: mkfifo not found"; exit 2;}
 
-SED=`type -P sed`
-if ! [ -x "$SED" ]
-then 
-	echo "Error: sed is not found"
-	exit 1
-fi
+# Logging
 
-DATE=`type -P date`
-if ! [ -x "$DATE" ]
-then 
-	echo "Error: date is not found"
-	exit 1
-fi
+##
+## Sends message to log with ERROR logging level
+##
+log_error()
+{
+	local LOG_SOURCE=$1
+	local LOG_MESSAGE=$2
+	(( $LOG_LEVEL & 1 )) && echo "[$($DATE '+%F %T.%N')][$LOG_SOURCE $$][ERROR] $LOG_MESSAGE" >> "$LOG_DIR/$LOG_SOURCE.log"
+}
 
-KILL=`type -P kill`
-if ! [ -x "$KILL" ]
-then 
-	echo "Error: kill is not found"
-	exit 1
-fi
+##
+## Sends message to log with WARN logging level
+##
+log_warn()
+{
+	local LOG_SOURCE=$1
+	local LOG_MESSAGE=$2
+	(( $LOG_LEVEL & 2 )) && echo "[$($DATE '+%F %T.%N')][$LOG_SOURCE $$][WARN] $LOG_MESSAGE" >> "$LOG_DIR/$LOG_SOURCE.log"
+}
 
-GREP=`type -P grep`
-if ! [ -x "$GREP" ]
-then 
-	echo "Error: grep is not found"
-	exit 1
-fi
+##
+## Sends message to log with INFO logging level
+##
+log_info()
+{
+	local LOG_SOURCE=$1
+	local LOG_MESSAGE=$2
+	(( $LOG_LEVEL & 4 )) && echo "[$($DATE '+%F %T.%N')][$LOG_SOURCE $$][INFO] $LOG_MESSAGE" >> "$LOG_DIR/$LOG_SOURCE.log"
+}
 
-TOUCH=`type -P touch`
-if ! [ -x "$TOUCH" ]
-then 
-	echo "Error: touch is not found"
-	exit 1
-fi
+##
+## Sends message to log with DEBUG logging level
+##
+log_debug()
+{
+	local LOG_SOURCE=$1
+	local LOG_MESSAGE=$2
+	(( $LOG_LEVEL & 8 )) && echo "[$($DATE '+%F %T.%N')][$LOG_SOURCE $$][DEBUG] $LOG_MESSAGE" >> "$LOG_DIR/$LOG_SOURCE.log"
+}
 
-NOHUP=`type -P nohup`
-if ! [ -x "$NOHUP" ]
-then 
-	echo "Error: nohup is not found"
-	exit 1
-fi
-
-SLEEP=`type -P sleep`
-if ! [ -x "$NOHUP" ]
-then 
-	echo "Error: nohup is not found"
-	exit 1
-fi
-
-FLOCK=`type -P flock`
-if ! [ -x "$FLOCK" ]
-then 
-	echo "Error: flock is not found"
-	exit 1
-fi
-
-FALSE=`type -P false`
-if ! [ -x "$FALSE" ]
-then 
-	echo "Error: false is not found"
-	exit 1
-fi
-
-BASE64=`type -P base64`
-if ! [ -x "$BASE64" ]
-then 
-	echo "Error: base64 is not found"
-	exit 1
-fi
-
-MKFIFO=`type -P mkfifo`
-if ! [ -x "$MKFIFO" ]
-then 
-	echo "Error: mkfifo is not found"
-	exit 1
-fi
-
-# Dashboard log file
-DASHBOARD_LOG_FILE=$SCRIPT_DIR/log/dashboard.log
-
-# Worker script
-WORKER_SCRIPT=$SCRIPT_DIR/worker.sh
-
-# Workers log file
-WORKER_LOG_FILE=$SCRIPT_DIR/log/worker.log
-
-# Worker pid file
-WORKER_PID_FILE=$SCRIPT_DIR/pid/worker.pid
-
-# Tasks queue script
-TASKSQUEUE_SCRIPT=$SCRIPT_DIR/tasksqueue.sh
-
-# Tasks queue tasks file
-TASKSQUEUE_TASKS_FILE=$SCRIPT_DIR/db/tasks
-
-# Tasks queue tasks lock
-TASKSQUEUE_TASKS_FILE_LOCK=$SCRIPT_DIR/lock/tasksfile
-
-# Tasks queue pipe to transmit tasks
-TASKSQUEUE_TASKS_PIPE=$SCRIPT_DIR/pipe/tasksqueue
-
-# Tasks queue pipe to transmit tasks lock
-TASKSQUEUE_TASKS_PIPE_LOCK=$SCRIPT_DIR/lock/taskspipe
-
-# Tasks queue pid file
-TASKSQUEUE_PID_FILE=$SCRIPT_DIR/pid/tasksqueue.pid
-
-# Tasksqueue log
-TASKSQUEUE_LOG_FILE=$SCRIPT_DIR/log/tasksqueue.log
-
-# Create tasksqueue files
-if ! [ -e "$TASKSQUEUE_TASKS_FILE" ]
-then 
-	"$TOUCH" "$TASKSQUEUE_TASKS_FILE"
-fi
-
-if ! [ -e "$TASKSQUEUE_TASKS_FILE_LOCK" ]
-then 
-	"$TOUCH" "$TASKSQUEUE_TASKS_FILE_LOCK"
-fi
-
-if ! [ -e "$TASKSQUEUE_TASKS_PIPE" ]
-then 
-	"$MKFIFO" "$TASKSQUEUE_TASKS_PIPE"
-fi
-
-if ! [ -e "$TASKSQUEUE_TASKS_PIPE_LOCK" ]
-then 
-	"$TOUCH" "$TASKSQUEUE_TASKS_PIPE_LOCK"
-fi
-
-# Create log files
-if ! [ -e "$LOG_TASKSQUEUE" ]
-then 
-	"$TOUCH" "$TASKSQUEUE_LOG_FILE"
-fi
-if ! [ -e "$LOG_DASHBOARD" ]
-then 
-	"$TOUCH" "$DASHBOARD_LOG_FILE"
-fi
-if ! [ -e "$LOG_WORKER" ]
-then 
-	"$TOUCH" "$WORKER_LOG_FILE"
-fi
+##
+## Sends message to log with TRACE logging level
+##
+log_trace()
+{
+	local LOG_SOURCE=$1
+	local LOG_MESSAGE=$2
+	(( $LOG_LEVEL & 16 )) && echo "[$($DATE '+%F %T.%N')][$LOG_SOURCE $$][TRACE] $LOG_MESSAGE" >> "$LOG_DIR/$LOG_SOURCE.log"
+}
