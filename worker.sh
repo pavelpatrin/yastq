@@ -1,101 +1,138 @@
 #!/bin/bash
 
+# Handle SIGTERM, SIGINT signal for forbid next iteration
+trap worker_prevent_iterations SIGTERM SIGINT
+
 # Include config file
-if [ -r "$HOME/.yastq.conf" ]
-then 
-	source "$HOME/.yastq.conf"
-elif [ -r "/etc/yastq.conf" ]
-then 
-	source "/etc/yastq.conf"
-else 
-	echo "Config file not found"
-	exit 1
-fi
-
-# Include common code
-if ! source "$COMMON_SCRIPT_FILE"
-then 
-	echo "Error including common file"
-	exit 1
-fi
-
-##
-## Sends message to log
-##
-worker_log() 
-{
-	echo "$($DATE +'%F %T') (worker $$) $1" >> "$WORKER_LOG_FILE"
+[ -r "$HOME/.yastq.conf" ] && source "$HOME/.yastq.conf" || { 
+	[ -r "/etc/yastq.conf" ] && source "/etc/yastq.conf" || { echo "Error: loading config file failed" 1>&2; exit 1; }
 }
 
+# Include common file
+[ -r "$COMMON_SCRIPT_FILE" ] && source "$COMMON_SCRIPT_FILE" || { echo "Error: loading common file failed" 1>&2; exit 1; }
+
 ##
-## Runs task
+## Reads task from tasks pipe
 ##
-worker_run_task()
+## Returns:
+##  0 - on success
+##  1 - on locking failure
+##  2 - on read failure
+##
+## Exports:
+##	RESULT
+##
+worker_read_task()
 {
-	local TASK=$1
-
-	"$BASH" -c "$TASK" &
-	wait $!
-	return $?
-}
-
-##
-## Gracefully stops the worker after current task
-##
-worker_graceful_stop()
-{
-	GRACEFUL_STOP=1
-	return 0
-}
-
-# Handle TERM signal for permit next iteration
-trap 'worker_graceful_stop && worker_log "Stopping gracefully" || worker_log "Stopping gracefully failed"' TERM
-
-# Log about starting
-worker_log "Starting"
-
-# Tasks loop
-while [ -z "$GRACEFUL_STOP" ]
-do
-	# Clear previous task
-	unset -v TASK_INFO
+	local TASK
+	unset -v RESULT
 
 	# Obtain exclusive lock
 	{
-		"$FLOCK" -x 200
-		read -t 0.1 -a TASK_INFO <> "$TASKSQUEUE_TASKS_PIPE"
-	} 200<"$TASKSQUEUE_TASKS_PIPE_LOCK"
+		log_debug "worker" "Locking file '$TASKS_PIPE' ..."
+		if "$FLOCK" -x 200
+		then 
+			log_debug "worker" "Locking file '$TASKS_PIPE' ok"
+			log_debug "worker" "Reading task from tasks pipe '$TASKS_PIPE' with 1 second timeout ..."
+			if read -t 1 -a TASK 0<>"$TASKS_PIPE"
+			then
+				log_debug "worker" "Reading task from tasks pipe '$TASKS_PIPE' ok"
+				RESULT=("${TASK[@]}")
+				return 0
+			else
+				log_debug "worker" "Reading task from tasks pipe '$TASKS_PIPE' failed ($?)"
+				return 2
+			fi
+		else
+			log_debug "worker" "Locking file '$TASKS_PIPE' failed ($?)"
+			return 1
+		fi
+	} 200<"$TASKS_PIPE"
+}
 
-	# If read was not success
-	if ! [ $? ]
+##
+## Executes specified task with handlers
+##
+## Params:
+##	$1 - TASK command
+##	$2 - SUCC handler command
+##	$3 - FAIL handler command
+##
+## Returns:
+##  0 - on success
+##
+worker_execute_task()
+{
+	local TASK=$1
+	local SUCC=$2
+	local FAIL=$3
+
+	log_debug "worker" "Executing task '$TASK' ..."
+	if worker_execute_command "$TASK"
 	then
-		continue
-	fi
-
-	# If read was empty
-	if ! [ "${#TASK_INFO[@]}" -gt 0 ] 
-	then
-		continue
-	fi
-
-	# Save task info into variables
-	TASK=$(echo ${TASK_INFO[0]}| $BASE64 --decode)
-	SUCC=$(echo ${TASK_INFO[1]}| $BASE64 --decode)
-	FAIL=$(echo ${TASK_INFO[2]}| $BASE64 --decode)
-
-	# Run task
-	worker_log "Running task: $TASK"
-	if worker_run_task "$TASK"
-	then
-		worker_log "Running task finished with code $?: $TASK"
-		worker_log "Executing SUCC command: $SUCC"
-		worker_run_task "$SUCC"
+		log_debug "worker" "Executing task '$TASK' ok"
+		log_debug "worker" "Executing success handler '$SUCC' ..."
+		if worker_execute_command "$SUCC"
+		then
+			log_debug "worker" "Executing success handler '$SUCC' ok"
+		else
+			log_debug "worker" "Executing success handler '$SUCC' failed ($?)"
+		fi
 	else 
-		worker_log "Running task finished with code $?: $TASK"
-		worker_log "Executing FAIL command: $FAIL"
-		worker_run_task "$FAIL"
+		log_debug "worker" "Executing task '$TASK' failed ($?)"
+		log_debug "worker" "Executing failure handler '$FAIL' ..."
+		if worker_execute_command "$FAIL"
+		then
+			log_debug "worker" "Executing failure handler '$FAIL' ok"
+		else
+			log_debug "worker" "Executing failure handler '$FAIL' failed ($?)"
+		fi
+	fi
+
+	return 0
+}
+
+##
+## Execute command in new terminal and return its exit code
+##
+worker_execute_command()
+{
+	local COMMAND=$1
+
+	log_debug "worker" "Executing command '$COMMAND' ..."
+	"$BASH" -c "$COMMAND" &
+	wait $!
+	EXIT_CODE=$?
+	log_debug "worker" "Executing command '$COMMAND' finished with code '$EXIT_CODE'"
+
+	return $EXIT_CODE
+}
+
+##
+## Prevent next iterations
+##
+worker_prevent_iterations()
+{
+	log_info "worker" "Finishing (signal handled)"
+	PREVENT_ITERATIONS=1
+}
+
+log_info "worker" "Starting"
+while [ -z "$PREVENT_ITERATIONS" ]
+do
+	if worker_read_task && [ -n "$RESULT" ]
+	then
+		TASK_ID=${RESULT[0]}
+		log_info "worker" "Decoding task '$TASK_ID' ..."
+		TASK=$(echo ${RESULT[1]}| $BASE64 --decode) 
+		SUCC=$(echo ${RESULT[2]}| $BASE64 --decode)
+		FAIL=$(echo ${RESULT[3]}| $BASE64 --decode)
+		log_info "worker" "Decoding task '$TASK_ID' ok"
+		log_info "worker" "Executing task '$TASK_ID' ..."
+		worker_execute_task "$TASK" "$SUCC" "$FAIL"
+		log_info "worker" "Executing task '$TASK_ID' ok"
+	else
+		"$SLEEP" 1s
 	fi
 done
-
-# Log about exiting
-worker_log "Exiting"
+log_info "worker" "Exiting"

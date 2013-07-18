@@ -23,7 +23,6 @@ PARALLEL_TASKS=$(fgrep -c processor /proc/cpuinfo)
 # Don`t touch it
 LOG_DIR=$SCRIPT_DIR/log
 PID_DIR=$SCRIPT_DIR/pid
-LOCK_DIR=$SCRIPT_DIR/lock
 PIPE_DIR=$SCRIPT_DIR/pipe
 TASK_DIR=$SCRIPT_DIR/task
 
@@ -44,16 +43,8 @@ TASKSQUEUE_PID_FILE=$PID_DIR/tasksqueue.pid
 
 # Path to delayed tasks database file
 # Don`t touch it
-TASKS_DELAYED_FILE=$TASK_DIR/delayed
+TASKS_FILE=$TASK_DIR/task
 
-# Path to delayed tasks database lock file
+# Path to pipe file
 # Don`t touch it
-TASKS_DELAYED_FILE_LOCK=$LOCK_DIR/delayed.lock
-
-# Path to transport pipe file
-# Don`t touch it
-TASKS_TRANSPORT_PIPE=$PIPE_DIR/transport
-
-# Path to transport pipe lock file 
-# Don`t touch it
-TASKS_TRANSPORT_PIPE_LOCK=$LOCK_DIR/transport.lock
+TASKS_PIPE=$PIPE_DIR/task

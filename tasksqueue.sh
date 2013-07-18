@@ -1,97 +1,108 @@
 #!/bin/bash
 
+# Handle SIGTERM, SIGINT signal to permit next iteration
+trap tasksqueue_prevent_iterations SIGTERM SIGINT
+
 # Include config file
-if [ -r "$HOME/.yastq.conf" ]
-then 
-	source "$HOME/.yastq.conf"
-elif [ -r "/etc/yastq.conf" ]
-then 
-	source "/etc/yastq.conf"
-else 
-	echo "Config file not found"
-	exit 1
-fi
-
-# Include common code
-if ! source "$COMMON_SCRIPT_FILE"
-then 
-	echo "Error including common file"
-	exit 1
-fi
-
-#
-if ! source "$SOURCE_DIR/tasksqueue.sh"
-then
-	
-fi
-
-##
-## Sends message to log
-##
-tasksqueue_log() 
-{
-	echo "$($DATE +'%F %T') (tasksqueue $$) $1" >> "$TASKSQUEUE_LOG_FILE"
+[ -r "$HOME/.yastq.conf" ] && source "$HOME/.yastq.conf" || { 
+	[ -r "/etc/yastq.conf" ] && source "/etc/yastq.conf" || { echo "Error: loading config file failed" 1>&2; exit 1; }
 }
 
+# Include common file
+[ -r "$COMMON_SCRIPT_FILE" ] && source "$COMMON_SCRIPT_FILE" || { echo "Error: loading common file failed" 1>&2; exit 1; }
+
 ##
-## Gracefully stops the tasks queue
+## Pops task from tasks file
 ##
-tasksqueue_graceful_stop()
+## Returns:
+##  0 - on success
+##  1 - on locking failure
+##  2 - on read failure
+##  3 - on removing failure
+##
+## Exports:
+##	RESULT
+##
+tasksqueue_pop_task()
 {
-	GRACEFUL_STOP=1
-	return 0
-}
+	unset -v RESULT
+	local TASK
 
-# Handle TERM signal to permit next iteration
-trap 'tasksqueue_graceful_stop && tasksqueue_log "Stopping gracefully" || tasksqueue_log "Stopping gracefully failed"' SIGTERM
-
-# Log about starting
-tasksqueue_log "Starting"
-
-# Tasks loop
-while [ -z "$GRACEFUL_STOP" ]
-do
 	# Obtain exclusive lock
 	{
-		"$FLOCK" -x 200
-		read -r TASK < "$TASKSQUEUE_TASKS_FILE"
-	} 200<"$TASKSQUEUE_TASKS_FILE_LOCK"
-
-	# If read was not success
-	if ! [ $? ]
-	then
-		continue
-	fi
-
-	# If read was empty
-	if ! [ -n "$TASK" ]
-	then
-		"$SLEEP" 0.1s
-		continue
-	fi
-
-	# Send new task to workers over pipe
-	if echo "$TASK" > "$TASKSQUEUE_TASKS_PIPE"
-	then
-		tasksqueue_log "Sending base64 task '$TASK' to pipe ok"
-	
-		# Obtain exclusive lock
-		{
-			"$FLOCK" -x 200
-			"$SED" -i 1d "$TASKSQUEUE_TASKS_FILE"
-		} 200<"$TASKSQUEUE_TASKS_FILE_LOCK"
-
-		# If row was removed
-		if [ $? ]
+		log_debug "tasksqueue" "Locking tasks file '$TASKS_FILE' ..."
+		if "$FLOCK" -x 200
 		then
-			tasksqueue_log "Removing base64 task '$TASK' from tasks database ok"
+			log_debug "tasksqueue" "Locking tasks file '$TASKS_FILE' ok"
+			log_debug "tasksqueue" "Reading first task from tasks file '$TASKS_FILE' ..."
+			if read -r TASK 0<>"$TASKS_FILE"
+			then
+				log_debug "tasksqueue" "Reading first task from tasks file '$TASKS_FILE' ok"
+				log_debug "tasksqueue" "Removing first task from tasks file '$TASKS_FILE' ..."
+				if "$SED" -i 1d "$TASKS_FILE"
+				then
+					log_debug "tasksqueue" "Removing first task from tasks file '$TASKS_FILE' ok"
+					RESULT=$TASK
+					return 0
+				else
+					log_debug "tasksqueue" "Removing first task from tasks file '$TASKS_FILE' failed ($?)"
+					return 3
+				fi
+			else
+				log_debug "tasksqueue" "Reading first task from tasks file '$TASKS_FILE' failed ($?)"
+				return 2
+			fi
 		else
-			tasksqueue_log "Removing base64 task '$TASK' from tasks database failed" 
-		fi
+			log_debug "tasksqueue" "Locking tasks file '$TASKS_FILE' failed ($?)"
+			return 1
+		fi		
+	} 200<"$TASKS_FILE"
+}
+
+##
+## Sends task to workers
+##
+## Returns:
+##  0 - on success
+##  1 - on sending failure
+##
+tasksqueue_send_task()
+{
+	local TASK=$1
+
+	log_debug "tasksqueue" "Sending task '$TASK' to '$TASKS_PIPE' ..."
+	if echo "$TASK" > "$TASKS_PIPE"
+	then
+		log_debug "tasksqueue" "Sending task '$TASK' to '$TASKS_PIPE' ok"
+		return 0
 	else
-		tasksqueue_log "Sending base64 task '$TASK' to pipe failed"
+		log_debug "tasksqueue" "Sending task '$TASK' to '$TASKS_PIPE' failed"
+		return 1
+	fi
+}
+
+##
+## Prevent next iterations
+##
+tasksqueue_prevent_iterations()
+{
+	log_info "tasksqueue" "Finishing (signal handled)"
+	PREVENT_ITERATIONS=1
+}
+
+log_info "tasksqueue" "Starting"
+while [ -z "$PREVENT_ITERATIONS" ]
+do
+	if tasksqueue_pop_task && [ -n "$RESULT" ]
+	then
+		log_info "tasksqueue" "Sending task '$RESULT' to workers ..."
+		while ! tasksqueue_send_task "$RESULT"
+		do
+			log_warn "tasksqueue" "Retring sending task '$RESULT' to workers ..."
+		done
+		log_warn "tasksqueue" "Sending task '$RESULT' to workers ok"
+	else
+		"$SLEEP" 1s
 	fi
 done
-
-# Log about exiting
-tasksqueue_log "Exiting"
+log_info "tasksqueue" "Exiting"
