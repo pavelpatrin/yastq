@@ -354,57 +354,71 @@ shift
 
 case $ACTION in 
 	"status")
-		log_info "dashboard" "Getting workers status ..." && echo "Getting workers status ..." 
+		log_info "dashboard" "Running [$ACTION] command ..." 
+
+		echo "Getting workers status ..." 
 		if workers_pids 
 		then 
-			log_info "dashboard" "Workers are running" && echo "Workers are running"
+			echo "Workers are running"
 		else 
-			log_info "dashboard" "Workers are not running" && echo "Workers are not running"
+			echo "Workers are not running"
 		fi
 
-		log_info "dashboard" "Getting tasks queue status ..." && echo "Getting tasks queue status ..." 
+		echo "Getting tasks queue status ..." 
 		if tasksqueue_pid
 		then 
-			log_info "dashboard" "Tasks queue is running" "" && echo "Tasks queue is running"
+			echo "Tasks queue is running"
 		else
-			log_info "dashboard" "Tasks queue is not running" "" && echo "Tasks queue is not running"
-		fi
-		;;
-	"start")
-		log_info "dashboard" "Staring tasks queue ..." && echo "Staring tasks queue ..."
-		if tasksqueue_start 
-		then
-			log_info "dashboard" "Staring tasks queue ok" && echo "Staring tasks queue ok"
-		else 
-			log_warn "dashboard" "Staring tasks queue failed" && echo "Staring tasks queue failed"
+			echo "Tasks queue is not running"
 		fi
 
-		log_info "dashboard" "Staring [$PARALLEL_TASKS] workers ..." && echo "Staring [$PARALLEL_TASKS] workers..."
+		log_info "dashboard" "Running [$ACTION] command ok" 
+		;;
+	"start")
+		log_info "dashboard" "Running [$ACTION] command ..." 
+
+		echo "Staring tasks queue ..."
+		if tasksqueue_start 
+		then
+			echo "Staring tasks queue ok"
+		else 
+			echo "Staring tasks queue failed"
+		fi
+
+		echo "Staring [$PARALLEL_TASKS] workers..."
 		if workers_start "$PARALLEL_TASKS"
 		then
-			log_info "dashboard" "Staring [$PARALLEL_TASKS] workers ok" && echo "Staring [$PARALLEL_TASKS] workers ok"
+			echo "Staring [$PARALLEL_TASKS] workers ok"
 		else 
-			log_warn "dashboard" "Staring [$PARALLEL_TASKS] workers failed" && echo "Staring [$PARALLEL_TASKS] workers failed"
+			echo "Staring [$PARALLEL_TASKS] workers failed"
 		fi
+
+		log_info "dashboard" "Running [$ACTION] command ok" 
 		;;
 	"stop")
-		log_info "dashboard" "Stopping tasks queue ..." && echo "Stopping tasks queue..."
+		log_info "dashboard" "Running [$ACTION] command ..." 
+
+		echo "Stopping tasks queue..."
 		if tasksqueue_stop 
 		then 
-			log_info "dashboard" "Stopping tasks queue ok" && echo "Stopping tasks queue ok"
+			echo "Stopping tasks queue ok"
 		else
-			log_warn "dashboard" "Stopping tasks queue failed" && echo "Stopping tasks queue failed"
+			echo "Stopping tasks queue failed"
 		fi
 	
-		log_info "dashboard" "Stopping workers ..." && echo "Stopping workers..."
+		echo "Stopping workers..."
 		if workers_stop 
 		then
-			log_info "dashboard" "Stopping workers ok" && echo "Stopping workers ok"
+			echo "Stopping workers ok"
 		else
-			log_warn "dashboard" "Stopping workers failed" && echo "Stopping workers failed"
+			echo "Stopping workers failed"
 		fi
+
+		log_info "dashboard" "Running [$ACTION] command ok"
 		;;
 	"add-task")
+		log_info "dashboard" "Running [$ACTION] command ..." 
+
 		TASK_SUCC=$FALSE
 		TASK_FAIL=$FALSE
 
@@ -433,24 +447,26 @@ case $ACTION in
 
 		if ! [ -n "$TASK_MAIN" -a -n "$TASK_SUCC" -a -n "$TASK_FAIL" ]
 		then
+			log_info "dashboard" "Running [$ACTION] command failed (Invalid arguments)" 
 			dashboard_print_usage
 			exit 1
 		fi
 		
-		log_info "dashboard" "Adding new task to tasks file ..."	
 		if dashboard_push_task "$TASK_MAIN" "$TASK_SUCC" "$TASK_FAIL" 
 		then
 			TASK_ID=$RESULT
-			log_info "dashboard" "Adding new task [$TASK_ID] to tasks file ok"
+			log_info "dashboard" "Running [$ACTION] command ok" 
 			echo "Task [$TASK_ID]"
 			exit 0
 		else
-			log_warn "dashboard" "Adding new task to tasks file failed"
+			log_info "dashboard" "Running [$ACTION] command failed (Pushing task failed)" 
 			echo "Task []"
 			exit 2
 		fi
 		;;
 	"remove-task")
+		log_info "dashboard" "Running [$ACTION] command ..." 
+
 		TASK_ID=$1
 		shift
 		if ! [ -n "$TASK_ID" ]
@@ -462,17 +478,17 @@ case $ACTION in
 		log_info "dashboard" "Removing task [$TASK_ID] from tasks file ..."
 		if dashboard_remove_task "$TASK_ID"
 		then
-			log_info "dashboard" "Removing task [$TASK_ID] from tasks file ok"
+			log_info "dashboard" "Running [$ACTION] command ok" 
 			echo "Removing task [$TASK_ID] from tasks file ok"
 			exit 0
 		else
-			log_warn "Removing task [$TASK_ID] from tasks file failed"
+			log_info "dashboard" "Running [$ACTION] command failed (Removing task failed)" 
 			echo "Removing task [$TASK_ID] from tasks file failed"
 			exit 2
 		fi
 		;;
 	"list-tasks")
-		log_info "dashboard" "Listing tasks from tasks file ..."
+		log_info "dashboard" "Running [$ACTION] command ..." 
 		if dashboard_get_tasks_ids
 		then
 			for TASK_ID in "${RESULT[@]}"
@@ -485,10 +501,10 @@ case $ACTION in
 					echo "Task '$TASK_ID': [$TASK_MAIN] success [$TASK_SUCC] fail [$TASK_FAIL]"
 				fi
 			done
-			log_info "dashboard" "Listing tasks from tasks file ok"
+			log_info "dashboard" "Running [$ACTION] command ok" 
 			exit 0
 		else
-			log_info "dashboard" "Listing tasks from tasks file failed"
+			echo "Removing task [$TASK_ID] from tasks file failed (Getting task ids failed)"
 			exit 1
 		fi
 		;;

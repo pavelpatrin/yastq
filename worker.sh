@@ -29,7 +29,7 @@ worker_read_task()
 
 	# Obtain exclusive lock
 	{
-		log_debug "worker" "Reading task from pipe [$TASKS_PIPE] ..."
+		log_debug "worker" "Reading task from tasks pipe [$TASKS_PIPE] ..."
 		if "$FLOCK" -x 200
 		then 
 			if read -t 1 -a TASK 0<>"$TASKS_PIPE"
@@ -38,11 +38,11 @@ worker_read_task()
 				RESULT=("${TASK[@]}")
 				return 0
 			else
-				log_debug "worker" "Reading task from pipe [$TASKS_PIPE] failed (Reading failed)"
+				log_debug "worker" "Reading task from tasks pipe [$TASKS_PIPE] failed (Reading failed)"
 				return 2
 			fi
 		else
-			log_debug "worker" "Reading task from pipe [$TASKS_PIPE] failed (Locking failed)"
+			log_debug "worker" "Reading task from tasks pipe [$TASKS_PIPE] failed (Locking failed)"
 			return 1
 		fi
 	} 200<"$TASKS_PIPE"
