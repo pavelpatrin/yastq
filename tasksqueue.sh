@@ -28,9 +28,8 @@ tasksqueue_pop_task()
 	unset -v RESULT
 	local TASK
 
-	# Obtain exclusive lock
+	log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' ..."
 	{
-		log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' ..."
 		if "$FLOCK" -x 200
 		then
 			if read -r TASK 0<>"$TASKS_FILE"
@@ -94,9 +93,9 @@ do
 		log_info "tasksqueue" "Sending task '$RESULT' to workers ..."
 		while ! tasksqueue_send_task "$RESULT"
 		do
-			log_warn "tasksqueue" "Retring sending task '$RESULT' to workers ..."
+			log_info "tasksqueue" "Retring sending task '$RESULT' to workers ..."
 		done
-		log_warn "tasksqueue" "Sending task '$RESULT' to workers ok"
+		log_info "tasksqueue" "Sending task '$RESULT' to workers ok"
 	else
 		"$SLEEP" 1s
 	fi

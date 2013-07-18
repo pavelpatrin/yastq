@@ -26,10 +26,9 @@ worker_read_task()
 {
 	local TASK
 	unset -v RESULT
-
-	# Obtain exclusive lock
+	
+	log_debug "worker" "Reading task from tasks pipe [$TASKS_PIPE] ..."
 	{
-		log_debug "worker" "Reading task from tasks pipe [$TASKS_PIPE] ..."
 		if "$FLOCK" -x 200
 		then 
 			if read -t 1 -a TASK 0<>"$TASKS_PIPE"

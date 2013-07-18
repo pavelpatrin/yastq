@@ -343,8 +343,9 @@ dashboard_get_tasks_ids()
 ##
 dashboard_print_usage()
 {
-	echo "Usage: $0 start|stop|status|add-task|remove-task|list-tasks"
+	echo "Usage: $0 start|stop|status|list-tasks"
 	echo "       $0 add-task task TASK [success SUCCESS] [fail FAIL]"
+	echo "       $0 show-task TASK_ID"
 	echo "       $0 remove-task TASK_ID"
 }
 
@@ -471,6 +472,7 @@ case $ACTION in
 		shift
 		if ! [ -n "$TASK_ID" ]
 		then
+			log_info "dashboard" "Running [$ACTION] command failed (Invalid arguments)" 
 			dashboard_print_usage
 			exit 1
 		fi
@@ -485,6 +487,32 @@ case $ACTION in
 			log_info "dashboard" "Running [$ACTION] command failed (Removing task failed)" 
 			echo "Removing task [$TASK_ID] from tasks file failed"
 			exit 2
+		fi
+		;;
+	"show-task")
+		log_info "dashboard" "Running [$ACTION] command ..." 
+
+		TASK_ID=$1
+		shift
+		if ! [ -n "$TASK_ID" ]
+		then
+			log_info "dashboard" "Running [$ACTION] command failed (Invalid arguments)" 
+			dashboard_print_usage
+			exit 1
+		fi
+
+		if dashboard_get_task "$TASK_ID"
+		then
+			TASK_GOAL=${RESULT[1]}
+			TASK_SUCC=${RESULT[2]}
+			TASK_FAIL=${RESULT[3]}
+			echo "Task '$TASK_ID': [$TASK_GOAL] success [$TASK_SUCC] fail [$TASK_FAIL]"
+			log_info "dashboard" "Running [$ACTION] command ok" 
+			exit 0
+		else
+			echo "Task '$TASK_ID': "
+			log_info "dashboard" "Running [$ACTION] command failed (Task is not found)" 
+			exit 1
 		fi
 		;;
 	"list-tasks")
