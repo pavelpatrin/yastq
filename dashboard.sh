@@ -457,11 +457,11 @@ case $ACTION in
 		then
 			TASK_ID=$RESULT
 			log_info "dashboard" "Running [$ACTION] command ok" 
-			echo "Task [$TASK_ID]"
+			echo "$TASK_ID"
 			exit 0
 		else
 			log_info "dashboard" "Running [$ACTION] command failed (Pushing task failed)" 
-			echo "Task []"
+			echo ""
 			exit 2
 		fi
 		;;
