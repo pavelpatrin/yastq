@@ -29,22 +29,20 @@ worker_read_task()
 
 	# Obtain exclusive lock
 	{
-		log_debug "worker" "Locking file '$TASKS_PIPE' ..."
+		log_debug "worker" "Reading task from pipe [$TASKS_PIPE] ..."
 		if "$FLOCK" -x 200
 		then 
-			log_debug "worker" "Locking file '$TASKS_PIPE' ok"
-			log_debug "worker" "Reading task from tasks pipe '$TASKS_PIPE' with 1 second timeout ..."
 			if read -t 1 -a TASK 0<>"$TASKS_PIPE"
 			then
-				log_debug "worker" "Reading task from tasks pipe '$TASKS_PIPE' ok"
+				log_debug "worker" "Reading task from tasks pipe [$TASKS_PIPE] ok"
 				RESULT=("${TASK[@]}")
 				return 0
 			else
-				log_debug "worker" "Reading task from tasks pipe '$TASKS_PIPE' failed ($?)"
+				log_debug "worker" "Reading task from pipe [$TASKS_PIPE] failed (Reading failed)"
 				return 2
 			fi
 		else
-			log_debug "worker" "Locking file '$TASKS_PIPE' failed ($?)"
+			log_debug "worker" "Reading task from pipe [$TASKS_PIPE] failed (Locking failed)"
 			return 1
 		fi
 	} 200<"$TASKS_PIPE"
@@ -67,25 +65,27 @@ worker_execute_task()
 	local SUCC=$2
 	local FAIL=$3
 
-	log_debug "worker" "Executing task '$TASK' ..."
+	log_debug "worker" "Executing task [$TASK] ..."
 	if worker_execute_command "$TASK"
 	then
-		log_debug "worker" "Executing task '$TASK' ok"
-		log_debug "worker" "Executing success handler '$SUCC' ..."
+		log_debug "worker" "Executing task [$TASK] ok"
+
+		log_debug "worker" "Executing success handler [$SUCC] ..."
 		if worker_execute_command "$SUCC"
 		then
-			log_debug "worker" "Executing success handler '$SUCC' ok"
+			log_debug "worker" "Executing success handler [$SUCC] ok"
 		else
-			log_debug "worker" "Executing success handler '$SUCC' failed ($?)"
+			log_debug "worker" "Executing success handler [$SUCC] failed (Exit code [$?])"
 		fi
 	else 
-		log_debug "worker" "Executing task '$TASK' failed ($?)"
-		log_debug "worker" "Executing failure handler '$FAIL' ..."
+		log_debug "worker" "Executing task [$TASK] failed (Exit code [$?])"
+
+		log_debug "worker" "Executing failure handler [$FAIL] ..."
 		if worker_execute_command "$FAIL"
 		then
-			log_debug "worker" "Executing failure handler '$FAIL' ok"
+			log_debug "worker" "Executing failure handler [$FAIL] ok"
 		else
-			log_debug "worker" "Executing failure handler '$FAIL' failed ($?)"
+			log_debug "worker" "Executing failure handler [$FAIL] failed (Exit code [$?])"
 		fi
 	fi
 
@@ -99,13 +99,18 @@ worker_execute_command()
 {
 	local COMMAND=$1
 
-	log_debug "worker" "Executing command '$COMMAND' ..."
+	log_debug "worker" "Executing command [$COMMAND] ..."
 	"$BASH" -c "$COMMAND" &
 	wait $!
 	EXIT_CODE=$?
-	log_debug "worker" "Executing command '$COMMAND' finished with code '$EXIT_CODE'"
-
-	return $EXIT_CODE
+	if [ 0 = "$EXIT_CODE" ]
+	then
+		log_debug "worker" "Executing command [$COMMAND] ok'"
+		return 0
+	else
+		log_debug "worker" "Executing command [$COMMAND] failed (Exit code [$EXIT_CODE])'"
+		return $EXIT_CODE
+	fi
 }
 
 ##
@@ -123,14 +128,17 @@ do
 	if worker_read_task && [ -n "$RESULT" ]
 	then
 		TASK_ID=${RESULT[0]}
-		log_info "worker" "Decoding task '$TASK_ID' ..."
 		TASK=$(echo ${RESULT[1]}| $BASE64 --decode) 
 		SUCC=$(echo ${RESULT[2]}| $BASE64 --decode)
 		FAIL=$(echo ${RESULT[3]}| $BASE64 --decode)
-		log_info "worker" "Decoding task '$TASK_ID' ok"
+
 		log_info "worker" "Executing task '$TASK_ID' ..."
-		worker_execute_task "$TASK" "$SUCC" "$FAIL"
-		log_info "worker" "Executing task '$TASK_ID' ok"
+		if worker_execute_task "$TASK" "$SUCC" "$FAIL"
+		then
+			log_info "worker" "Executing task '$TASK_ID' ok"
+		else
+			log_info "worker" "Executing task '$TASK_ID' failed"
+		fi
 	else
 		"$SLEEP" 1s
 	fi

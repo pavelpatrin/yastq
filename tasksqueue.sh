@@ -30,32 +30,28 @@ tasksqueue_pop_task()
 
 	# Obtain exclusive lock
 	{
-		log_debug "tasksqueue" "Locking tasks file '$TASKS_FILE' ..."
+		log_debug "tasksqueue" "Poping task from tasks file '$TASKS_FILE' ..."
 		if "$FLOCK" -x 200
 		then
-			log_debug "tasksqueue" "Locking tasks file '$TASKS_FILE' ok"
-			log_debug "tasksqueue" "Reading first task from tasks file '$TASKS_FILE' ..."
 			if read -r TASK 0<>"$TASKS_FILE"
 			then
-				log_debug "tasksqueue" "Reading first task from tasks file '$TASKS_FILE' ok"
-				log_debug "tasksqueue" "Removing first task from tasks file '$TASKS_FILE' ..."
 				if "$SED" -i 1d "$TASKS_FILE"
 				then
-					log_debug "tasksqueue" "Removing first task from tasks file '$TASKS_FILE' ok"
 					RESULT=$TASK
+					log_debug "tasksqueue" "Poping task from tasks file '$TASKS_FILE' ok"
 					return 0
 				else
-					log_debug "tasksqueue" "Removing first task from tasks file '$TASKS_FILE' failed ($?)"
+					log_debug "tasksqueue" "Poping task from tasks file '$TASKS_FILE' failed (Removing failed)"
 					return 3
 				fi
 			else
-				log_debug "tasksqueue" "Reading first task from tasks file '$TASKS_FILE' failed ($?)"
+				log_debug "tasksqueue" "Poping task from tasks file '$TASKS_FILE' failed (Reading failed))"
 				return 2
 			fi
 		else
-			log_debug "tasksqueue" "Locking tasks file '$TASKS_FILE' failed ($?)"
+			log_debug "tasksqueue" "tasksqueue" "Poping task from tasks file '$TASKS_FILE' failed (Locking failed)"
 			return 1
-		fi		
+		fi
 	} 200<"$TASKS_FILE"
 }
 
@@ -76,7 +72,7 @@ tasksqueue_send_task()
 		log_debug "tasksqueue" "Sending task '$TASK' to '$TASKS_PIPE' ok"
 		return 0
 	else
-		log_debug "tasksqueue" "Sending task '$TASK' to '$TASKS_PIPE' failed"
+		log_debug "tasksqueue" "Sending task '$TASK' to '$TASKS_PIPE' failed (Writing task failed)"
 		return 1
 	fi
 }
