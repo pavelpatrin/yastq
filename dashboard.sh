@@ -365,9 +365,9 @@ case $ACTION in
 		log_info "dashboard" "Getting tasks queue status ..." && echo "Getting tasks queue status ..." 
 		if tasksqueue_pid
 		then 
-			log_info "Tasks queue is running" "" && echo "Tasks queue is running"
+			log_info "dashboard" "Tasks queue is running" "" && echo "Tasks queue is running"
 		else
-			log_info "Tasks queue is not running" "" && echo "Tasks queue is not running"
+			log_info "dashboard" "Tasks queue is not running" "" && echo "Tasks queue is not running"
 		fi
 		;;
 	"start")
