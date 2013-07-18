@@ -30,7 +30,7 @@ tasksqueue_pop_task()
 
 	# Obtain exclusive lock
 	{
-		log_debug "tasksqueue" "Poping task from tasks file '$TASKS_FILE' ..."
+		log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' ..."
 		if "$FLOCK" -x 200
 		then
 			if read -r TASK 0<>"$TASKS_FILE"
@@ -38,18 +38,18 @@ tasksqueue_pop_task()
 				if "$SED" -i 1d "$TASKS_FILE"
 				then
 					RESULT=$TASK
-					log_debug "tasksqueue" "Poping task from tasks file '$TASKS_FILE' ok"
+					log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' ok"
 					return 0
 				else
-					log_debug "tasksqueue" "Poping task from tasks file '$TASKS_FILE' failed (Removing failed)"
+					log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' failed (Removing failed)"
 					return 3
 				fi
 			else
-				log_debug "tasksqueue" "Poping task from tasks file '$TASKS_FILE' failed (Reading failed))"
+				log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' failed (Reading failed))"
 				return 2
 			fi
 		else
-			log_debug "tasksqueue" "tasksqueue" "Poping task from tasks file '$TASKS_FILE' failed (Locking failed)"
+			log_debug "tasksqueue" "tasksqueue" "Popping task from tasks file '$TASKS_FILE' failed (Locking failed)"
 			return 1
 		fi
 	} 200<"$TASKS_FILE"

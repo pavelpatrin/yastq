@@ -61,31 +61,29 @@ worker_read_task()
 ##
 worker_execute_task()
 {
-	local TASK=$1
-	local SUCC=$2
-	local FAIL=$3
+	local TASK_GOAL=$1
+	local TASK_SUCC=$2
+	local TASK_FAIL=$3
 
-	log_debug "worker" "Executing task [$TASK] ..."
-	if worker_execute_command "$TASK"
+	log_debug "worker" "Executing task goal [$TASK_GOAL] ..."
+	if worker_execute_command "$TASK_GOAL"
 	then
-		log_debug "worker" "Executing task [$TASK] ok"
-
-		log_debug "worker" "Executing success handler [$SUCC] ..."
-		if worker_execute_command "$SUCC"
+		log_debug "worker" "Executing task goal [$TASK_GOAL] ok"
+		log_debug "worker" "Executing task success handler [$TASK_SUCC] ..."
+		if worker_execute_command "$TASK_SUCC"
 		then
-			log_debug "worker" "Executing success handler [$SUCC] ok"
+			log_debug "worker" "Executing success handler [$TASK_SUCC] ok"
 		else
-			log_debug "worker" "Executing success handler [$SUCC] failed (Exit code [$?])"
+			log_debug "worker" "Executing success handler [$TASK_SUCC] failed (Exit code [$?])"
 		fi
 	else 
-		log_debug "worker" "Executing task [$TASK] failed (Exit code [$?])"
-
-		log_debug "worker" "Executing failure handler [$FAIL] ..."
-		if worker_execute_command "$FAIL"
+		log_debug "worker" "Executing task goal [$TASK_GOAL] failed (Exit code [$?])"
+		log_debug "worker" "Executing failure handler [$TASK_FAIL] ..."
+		if worker_execute_command "$TASK_FAIL"
 		then
-			log_debug "worker" "Executing failure handler [$FAIL] ok"
+			log_debug "worker" "Executing failure handler [$TASK_FAIL] ok"
 		else
-			log_debug "worker" "Executing failure handler [$FAIL] failed (Exit code [$?])"
+			log_debug "worker" "Executing failure handler [$TASK_FAIL] failed (Exit code [$?])"
 		fi
 	fi
 
@@ -128,16 +126,16 @@ do
 	if worker_read_task && [ -n "$RESULT" ]
 	then
 		TASK_ID=${RESULT[0]}
-		TASK=$(echo ${RESULT[1]}| $BASE64 --decode) 
-		SUCC=$(echo ${RESULT[2]}| $BASE64 --decode)
-		FAIL=$(echo ${RESULT[3]}| $BASE64 --decode)
+		TASK_GOAL=$(echo ${RESULT[1]}| $BASE64 --decode) 
+		TASK_SUCC=$(echo ${RESULT[2]}| $BASE64 --decode)
+		TASK_FAIL=$(echo ${RESULT[3]}| $BASE64 --decode)
 
-		log_info "worker" "Executing task '$TASK_ID' ..."
-		if worker_execute_task "$TASK" "$SUCC" "$FAIL"
+		log_info "worker" "Executing task [$TASK_ID] ..."
+		if worker_execute_task "$TASK_GOAL" "$TASK_SUCC" "$TASK_FAIL"
 		then
-			log_info "worker" "Executing task '$TASK_ID' ok"
+			log_info "worker" "Executing task [$TASK_ID] ok"
 		else
-			log_info "worker" "Executing task '$TASK_ID' failed"
+			log_info "worker" "Executing task [$TASK_ID] failed"
 		fi
 	else
 		"$SLEEP" 1s

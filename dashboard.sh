@@ -198,15 +198,15 @@ tasksqueue_stop()
 ##
 dashboard_push_task() 
 {	
-	local TASK_MAIN=$1
+	local TASK_GOAL=$1
 	local TASK_SUCC=$2
 	local TASK_FAIL=$3
 	unset -v RESULT
 
-	log_debug "dashboard" "Pushing task [$TASK_MAIN] succ [$TASK_SUCC] fail [$TASK_FAIL] to tasks file ..."
-	if ! [ -n "$TASK_MAIN" -a -n "$TASK_SUCC" -a -n "$TASK_FAIL" ]
+	log_debug "dashboard" "Pushing task [$TASK_GOAL] succ [$TASK_SUCC] fail [$TASK_FAIL] to tasks file ..."
+	if ! [ -n "$TASK_GOAL" -a -n "$TASK_SUCC" -a -n "$TASK_FAIL" ]
 	then
-		log_debug "dashboard" "Pushing task [$TASK_MAIN] [$TASK_SUCC] [$TASK_FAIL] to tasks file failed (Task is not correct)"
+		log_debug "dashboard" "Pushing task [$TASK_GOAL] [$TASK_SUCC] [$TASK_FAIL] to tasks file failed (Task is not correct)"
 		return 1
 	fi
 
@@ -214,13 +214,13 @@ dashboard_push_task()
 		"$FLOCK" -x 200
 		local TASK_ID=$($DATE '+%s%N')
 
-		if echo "$TASK_ID" "$(echo $TASK_MAIN | $BASE64 -w 0)" "$(echo $TASK_SUCC | $BASE64 -w 0)" "$(echo $TASK_FAIL | $BASE64 -w 0)" >> "$TASKS_FILE"
+		if echo "$TASK_ID" "$(echo $TASK_GOAL | $BASE64 -w 0)" "$(echo $TASK_SUCC | $BASE64 -w 0)" "$(echo $TASK_FAIL | $BASE64 -w 0)" >> "$TASKS_FILE"
 		then
 			RESULT=$TASK_ID
-			log_debug "dashboard" "Pushing task [$TASK_ID] to tasks file ok"
+			log_debug "dashboard" "Pushing task [$TASK_GOAL] succ [$TASK_SUCC] fail [$TASK_FAIL] to tasks file ok"
 			return 0
 		else
-			log_debug "dashboard" "Pushing task to tasks file failed ($?)"
+			log_debug "dashboard" "Pushing task [$TASK_GOAL] succ [$TASK_SUCC] fail [$TASK_FAIL] to tasks file failed ($?)"
 			return 2	
 		fi
 	} 200<"$TASKS_FILE"
@@ -300,10 +300,10 @@ dashboard_get_task()
 		do
 			if [ "$TASK_ID" = "${TASK[0]}" ]
 			then
-				local TASK_MAIN=$(echo ${TASK[1]}| $BASE64 --decode)
+				local TASK_GOAL=$(echo ${TASK[1]}| $BASE64 --decode)
 				local TASK_SUCC=$(echo ${TASK[2]}| $BASE64 --decode)
 				local TASK_FAIL=$(echo ${TASK[3]}| $BASE64 --decode)
-				RESULT=("${TASK[0]}" "$TASK_MAIN" "$TASK_SUCC" "$TASK_FAIL")
+				RESULT=("${TASK[0]}" "$TASK_GOAL" "$TASK_SUCC" "$TASK_FAIL")
 				log_debug "dashboard" "Getting task [$TASK_ID] from tasks file ok"
 				return 0
 			fi
@@ -427,7 +427,7 @@ case $ACTION in
 		do
 			case $1 in 
 				"task")
-					TASK_MAIN=$2
+					TASK_GOAL=$2
 					shift; shift
 					;;
 				"success")
@@ -445,14 +445,14 @@ case $ACTION in
 			esac
 		done
 
-		if ! [ -n "$TASK_MAIN" -a -n "$TASK_SUCC" -a -n "$TASK_FAIL" ]
+		if ! [ -n "$TASK_GOAL" -a -n "$TASK_SUCC" -a -n "$TASK_FAIL" ]
 		then
 			log_info "dashboard" "Running [$ACTION] command failed (Invalid arguments)" 
 			dashboard_print_usage
 			exit 1
 		fi
 		
-		if dashboard_push_task "$TASK_MAIN" "$TASK_SUCC" "$TASK_FAIL" 
+		if dashboard_push_task "$TASK_GOAL" "$TASK_SUCC" "$TASK_FAIL" 
 		then
 			TASK_ID=$RESULT
 			log_info "dashboard" "Running [$ACTION] command ok" 
@@ -495,10 +495,10 @@ case $ACTION in
 			do
 				if dashboard_get_task "$TASK_ID"
 				then
-					TASK_MAIN=${RESULT[1]}
+					TASK_GOAL=${RESULT[1]}
 					TASK_SUCC=${RESULT[2]}
 					TASK_FAIL=${RESULT[3]}
-					echo "Task '$TASK_ID': [$TASK_MAIN] success [$TASK_SUCC] fail [$TASK_FAIL]"
+					echo "Task '$TASK_ID': [$TASK_GOAL] success [$TASK_SUCC] fail [$TASK_FAIL]"
 				fi
 			done
 			log_info "dashboard" "Running [$ACTION] command ok" 
