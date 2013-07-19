@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Handle SIGTERM, SIGINT signal to permit next iteration
-trap tasksqueue_prevent_iterations SIGTERM SIGINT
+# Handle SIGTERM and SIGINT signals
+trap tasksqueue_graceful_stop SIGTERM SIGINT
 
 # Include config file
 [ -r "$HOME/.yastq.conf" ] && source "$HOME/.yastq.conf" || { 
@@ -12,74 +12,9 @@ trap tasksqueue_prevent_iterations SIGTERM SIGINT
 [ -r "$COMMON_SCRIPT_FILE" ] && source "$COMMON_SCRIPT_FILE" || { echo "Error: loading common file failed" 1>&2; exit 1; }
 
 ##
-## Pops task from tasks file
-##
-## Returns:
-##  0 - on success
-##  1 - on locking failure
-##  2 - on read failure
-##  3 - on removing failure
-##
-## Exports:
-##	RESULT
-##
-tasksqueue_pop_task()
-{
-	unset -v RESULT
-	local TASK
-
-	log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' ..."
-	{
-		if "$FLOCK" -x 200
-		then
-			if read -r TASK 0<>"$TASKS_FILE"
-			then
-				if "$SED" -i 1d "$TASKS_FILE"
-				then
-					RESULT=$TASK
-					log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' ok"
-					return 0
-				else
-					log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' failed (Removing failed)"
-					return 3
-				fi
-			else
-				log_debug "tasksqueue" "Popping task from tasks file '$TASKS_FILE' failed (Reading failed))"
-				return 2
-			fi
-		else
-			log_debug "tasksqueue" "tasksqueue" "Popping task from tasks file '$TASKS_FILE' failed (Locking failed)"
-			return 1
-		fi
-	} 200<"$TASKS_FILE"
-}
-
-##
-## Sends task to workers
-##
-## Returns:
-##  0 - on success
-##  1 - on sending failure
-##
-tasksqueue_send_task()
-{
-	local TASK=$1
-
-	log_debug "tasksqueue" "Sending task '$TASK' to '$TASKS_PIPE' ..."
-	if echo "$TASK" > "$TASKS_PIPE"
-	then
-		log_debug "tasksqueue" "Sending task '$TASK' to '$TASKS_PIPE' ok"
-		return 0
-	else
-		log_debug "tasksqueue" "Sending task '$TASK' to '$TASKS_PIPE' failed (Writing task failed)"
-		return 1
-	fi
-}
-
-##
 ## Prevent next iterations
 ##
-tasksqueue_prevent_iterations()
+tasksqueue_graceful_stop()
 {
 	log_info "tasksqueue" "Finishing (signal handled)"
 	PREVENT_ITERATIONS=1
@@ -88,16 +23,17 @@ tasksqueue_prevent_iterations()
 log_info "tasksqueue" "Starting"
 while [ -z "$PREVENT_ITERATIONS" ]
 do
-	if tasksqueue_pop_task && [ -n "$RESULT" ]
+	if queuedb_pop
 	then
-		log_info "tasksqueue" "Sending task '$RESULT' to workers ..."
-		while ! tasksqueue_send_task "$RESULT"
+		TASK_DATA=("${RESULT[@]}")
+		log_info "tasksqueue" "Sending task [${TASK_DATA[0]}] to workers ..."
+		while ! echo $(printf "%q " "${TASK_DATA[@]}") > "$TASKS_PIPE" 
 		do
-			log_info "tasksqueue" "Retring sending task '$RESULT' to workers ..."
+			log_info "tasksqueue" "Retring sending task [${TASK_DATA[0]}] to workers ..."
 		done
-		log_info "tasksqueue" "Sending task '$RESULT' to workers ok"
+		log_info "tasksqueue" "Sending task [${TASK_DATA[0]}] to workers ok"
 	else
-		"$SLEEP" 1s
+		sleep 1s
 	fi
 done
 log_info "tasksqueue" "Exiting"

@@ -2,6 +2,10 @@
 ## Yastq script configuration file
 ##
 
+####################################
+### This settings must be tuned  ###
+####################################
+
 # Script directory
 # SCRIPT_DIR=/absolute/path/to/script/directory
 SCRIPT_DIR="/home/pavelpat/Projects/yastq"
@@ -19,32 +23,39 @@ LOG_LEVEL=$(( 1 | 2 | 4 | 8 | 16 ))
 # PARALLEL_TASKS=N
 PARALLEL_TASKS=$(fgrep -c processor /proc/cpuinfo)
 
+####################################
+### Dont touch settings below!!! ###
+####################################
+
 # Script parts directories
-# Don`t touch it
 LOG_DIR=$SCRIPT_DIR/log
 PID_DIR=$SCRIPT_DIR/pid
 PIPE_DIR=$SCRIPT_DIR/pipe
 TASK_DIR=$SCRIPT_DIR/task
+LOCK_DIR=$SCRIPT_DIR/lock
 
 # Script part files
-# Don`t touch it
 COMMON_SCRIPT_FILE=$SCRIPT_DIR/common.sh
+LOGGER_SCRIPT_FILE=$SCRIPT_DIR/logger.sh
 WORKER_SCRIPT_FILE=$SCRIPT_DIR/worker.sh
+QUEUEDB_SCRIPT_FILE=$SCRIPT_DIR/queuedb.sh
 DASHBOARD_SCRIPT_FILE=$SCRIPT_DIR/dashboard.sh
 TASKSQUEUE_SCRIPT_FILE=$SCRIPT_DIR/tasksqueue.sh
 
 # Path to workers pid file
-# Don`t touch it
 WORKERS_PID_FILE=$PID_DIR/workers.pid
 
 # Path to tasksqueue pid file
-# Don`t touch it
 TASKSQUEUE_PID_FILE=$PID_DIR/tasksqueue.pid
 
-# Path to delayed tasks database file
-# Don`t touch it
+# Path to delayed tasks database file lock
 TASKS_FILE=$TASK_DIR/task
 
+# Path to delayed tasks database file
+TASKS_FILE_LOCK=$LOCK_DIR/taskfile
+
 # Path to pipe file
-# Don`t touch it
 TASKS_PIPE=$PIPE_DIR/task
+
+# Path to pipe file lock
+TASKS_PIPE_LOCK=$LOCK_DIR/taskpipe

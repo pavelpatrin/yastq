@@ -31,7 +31,7 @@ workers_pids()
 
 	local WORKERS_PIDS
 	read -r WORKERS_PIDS 0<"$WORKERS_PID_FILE"
-	if "$PS" -p $WORKERS_PIDS 2>/dev/null 1>/dev/null
+	if ps -p $WORKERS_PIDS 2>/dev/null 1>/dev/null
 	then
 		RESULT=$WORKERS_PIDS
 		log_debug "dashboard" "Getting workers pids ok [$WORKERS_PIDS]"
@@ -59,7 +59,7 @@ workers_start()
 		local WORKERS_PIDS
 		for ((i=1; i<=$WORKERS_COUNT; i++))
 		do
-			"$NOHUP" "$WORKER_SCRIPT_FILE" 2>/dev/null 1>/dev/null &
+			nohup "$WORKER_SCRIPT_FILE" 2>/dev/null 1>/dev/null &
 			WORKERS_PIDS="$WORKERS_PIDS $!"
 		done
 
@@ -85,13 +85,14 @@ workers_stop()
 	log_debug "dashboard" "Stopping workers ..."
 	if workers_pids
 	then
-		"$KILL" -s SIGTERM $RESULT 1>/dev/null
-		while "$PS" -p $RESULT 1>/dev/null
+		local WORKERS_PIDS=$RESULT
+		kill -s SIGTERM $WORKERS_PIDS 1>/dev/null
+		while ps -p $WORKERS_PIDS 1>/dev/null
 		do
-		    "$SLEEP" 1s
+		    sleep 1s
 		done
-		"$RM" -f "$WORKERS_PID_FILE"
-		log_debug "dashboard" "Stopping workers [$RESULT] ok"
+		rm -f "$WORKERS_PID_FILE"
+		log_debug "dashboard" "Stopping workers [$WORKERS_PIDS] ok"
 		return 0
 	else
 		log_debug "dashboard" "Stopping workers failed (Workers are not running)"
@@ -122,7 +123,7 @@ tasksqueue_pid()
 
 	local TASKSQUEUE_PID
 	read -r TASKSQUEUE_PID 0<"$TASKSQUEUE_PID_FILE"
-	if "$PS" -p $TASKSQUEUE_PID 2>/dev/null 1>/dev/null
+	if ps -p $TASKSQUEUE_PID 2>/dev/null 1>/dev/null
 	then
 		RESULT=$TASKSQUEUE_PID
 		log_debug "dashboard" "Getting tasksqueue pids ok [$TASKSQUEUE_PID]"
@@ -145,7 +146,7 @@ tasksqueue_start()
 	log_debug "dashboard" "Starting tasksqueue  ..."
 	if ! tasksqueue_pid
 	then
-		"$NOHUP" "$TASKSQUEUE_SCRIPT_FILE" 2>/dev/null 1>/dev/null &
+		nohup "$TASKSQUEUE_SCRIPT_FILE" 2>/dev/null 1>/dev/null &
 		local TASKSQUEUE_PID=$!
 		echo $TASKSQUEUE_PID 1>"$TASKSQUEUE_PID_FILE"
 		log_debug "dashboard" "Starting tasksqueue [$TASKSQUEUE_PID] ok"
@@ -169,173 +170,18 @@ tasksqueue_stop()
 	if tasksqueue_pid
 	then
 		local TASKSQUEUE_PID=$RESULT
-		"$KILL" -s SIGTERM $TASKSQUEUE_PID 1>/dev/null
-		while "$PS" -p $TASKSQUEUE_PID 1>/dev/null;	do "$SLEEP" 1s; done
-		"$RM" -f "$TASKSQUEUE_PID_FILE"
+		kill -s SIGTERM $TASKSQUEUE_PID 1>/dev/null
+		while ps -p $TASKSQUEUE_PID 1>/dev/null
+		do 
+			sleep 1s; 
+		done
+		rm -f "$TASKSQUEUE_PID_FILE"
 		log_debug "dashboard" "Stopping tasksqueue [$TASKSQUEUE_PID] ok"
 		return 0
 	else
 		log_debug "dashboard" "Stopping tasksqueue failed (Tasksqueue is not running)"
 		return 1
 	fi
-}
-
-## 
-## Appends tasks file with new task
-##
-## Params:
-##	$1 - Task code
-##	$2 - Task success handler
-##	$3 - Task failure handler
-##
-## Returns:
-##  0 - on adding success
-##  1 - on empty args
-##  2 - on adding fail
-## 
-## Exports:
-##	RESULT - Task id
-##
-dashboard_push_task() 
-{	
-	local TASK_GOAL=$1
-	local TASK_SUCC=$2
-	local TASK_FAIL=$3
-	unset -v RESULT
-
-	log_debug "dashboard" "Pushing task [$TASK_GOAL] succ [$TASK_SUCC] fail [$TASK_FAIL] to tasks file ..."
-	if ! [ -n "$TASK_GOAL" -a -n "$TASK_SUCC" -a -n "$TASK_FAIL" ]
-	then
-		log_debug "dashboard" "Pushing task [$TASK_GOAL] [$TASK_SUCC] [$TASK_FAIL] to tasks file failed (Task is not correct)"
-		return 1
-	fi
-
-	{
-		"$FLOCK" -x 200
-		local TASK_ID=$($DATE '+%s%N')
-
-		if echo "$TASK_ID" "$(echo $TASK_GOAL | $BASE64 -w 0)" "$(echo $TASK_SUCC | $BASE64 -w 0)" "$(echo $TASK_FAIL | $BASE64 -w 0)" >> "$TASKS_FILE"
-		then
-			RESULT=$TASK_ID
-			log_debug "dashboard" "Pushing task [$TASK_GOAL] succ [$TASK_SUCC] fail [$TASK_FAIL] to tasks file ok"
-			return 0
-		else
-			log_debug "dashboard" "Pushing task [$TASK_GOAL] succ [$TASK_SUCC] fail [$TASK_FAIL] to tasks file failed ($?)"
-			return 2	
-		fi
-	} 200<"$TASKS_FILE"
-}
-
-## 
-## Removes tasks from tasks file
-##
-## Params:
-##	$1 - Task id
-##
-## Returns:
-##  0 - on success
-##  1 - on empty task id
-##  2 - on task is not found
-##  3 - on task is found but not removed
-##
-dashboard_remove_task()
-{
-	local TASK_ID=$1
-
-	log_debug "dashboard" "Removing task [$TASK_ID] from tasks file ..."
-	if ! [ -n "$TASK_ID" ]
-	then
-		log_debug "dashboard" "Removing task [$TASK_ID] from tasks file failed (TASK_ID is empty)"
-		return 1
-	fi
-
-	{
-		"$FLOCK" -x 200
-		if "$GREP" -e "^$TASK_ID\\s" "$TASKS_FILE" 1>/dev/null
-		then
-			if "$SED" -i "/^$TASK_ID\\s/d" "$TASKS_FILE"
-			then
-				log_debug "dashboard" "Removing task [$TASK_ID] from tasks file ok"
-				return 0
-			else
-				log_debug "dashboard" "Removing task [$TASK_ID] from tasks file failed (Task is not removed)"
-				return 3
-			fi
-		else
-			log_debug "dashboard" "Removing task [$TASK_ID] from tasks file failed (Task is not found)"
-			return 2
-		fi
-	} 200<"$TASKS_FILE" 
-}
-
-## 
-## Get task info from tasks file
-##
-## Params:
-##	$1 - Task id
-##
-## Returns:
-##  0 - on success
-##  1 - on empty task id
-##  2 - on task is not found
-## 
-## Exports:
-##	RESULT - Array with task info
-##
-dashboard_get_task()
-{
-	local TASK_ID=$1
-	unset -v RESULT
-
-	log_debug "dashboard" "Getting task [$TASK_ID] from tasks file ..."
-	if ! [ -n "$TASK_ID" ]
-	then
-		log_debug "dashboard" "Getting task [$TASK_ID] from tasks file failed (TASK_ID is empty)"
-		return 1
-	fi
-
-	{
-		"$FLOCK" -x 200
-		while read -a TASK 
-		do
-			if [ "$TASK_ID" = "${TASK[0]}" ]
-			then
-				local TASK_GOAL=$(echo ${TASK[1]}| $BASE64 --decode)
-				local TASK_SUCC=$(echo ${TASK[2]}| $BASE64 --decode)
-				local TASK_FAIL=$(echo ${TASK[3]}| $BASE64 --decode)
-				RESULT=("${TASK[0]}" "$TASK_GOAL" "$TASK_SUCC" "$TASK_FAIL")
-				log_debug "dashboard" "Getting task [$TASK_ID] from tasks file ok"
-				return 0
-			fi
-		done 0<"$TASKS_FILE"
-		log_debug "dashboard" "Getting task [$TASK_ID] from tasks file failed (Task is not found)"
-		return 2
-	} 200<"$TASKS_FILE" 
-}
-
-## 
-## Get all tasks info from tasks file
-##
-## Returns:
-##  0 - on success
-##
-## Exports:
-##	RESULT - Ids of tasks
-##
-dashboard_get_tasks_ids()
-{
-	unset -v RESULT
-
-	log_debug "dashboard" "Getting all tasks ids from tasks file ..."
-	{
-		"$FLOCK" -x 200
-		while read -a TASK 
-		do
-			RESULT=("${RESULT[@]}" "${TASK[0]}")
-		done 0<"$TASKS_FILE"
-	} 200<"$TASKS_FILE" 
-	log_debug "dashboard" "Getting all tasks ids [${#RESULT[@]}] from tasks file ok"
-	return 0
 }
 
 ##
@@ -355,89 +201,86 @@ shift
 
 case $ACTION in 
 	"status")
-		log_info "dashboard" "Running [$ACTION] command ..." 
-
-		echo "Getting workers status ..." 
+		log_info "dashboard" "Getting workers status ..."  
 		if workers_pids 
 		then 
+			log_info "dashboard" "Workers are running" 
 			echo "Workers are running"
 		else 
+			log_info "dashboard" "Workers are not running" 
 			echo "Workers are not running"
 		fi
 
-		echo "Getting tasks queue status ..." 
+		log_info "dashboard" "Getting tasks queue status ..."  
 		if tasksqueue_pid
 		then 
+			log_info "dashboard" "Tasks queue is running" 
 			echo "Tasks queue is running"
 		else
+			log_info "dashboard" "Tasks queue is not running" 
 			echo "Tasks queue is not running"
 		fi
-
-		log_info "dashboard" "Running [$ACTION] command ok" 
 		;;
 	"start")
-		log_info "dashboard" "Running [$ACTION] command ..." 
-
+		log_info "dashboard" "Staring tasks queue ..." 
 		echo "Staring tasks queue ..."
 		if tasksqueue_start 
 		then
+			log_info "dashboard" "Staring tasks queue ok" 
 			echo "Staring tasks queue ok"
 		else 
+			log_info "dashboard" "Staring tasks queue failed" 
 			echo "Staring tasks queue failed"
 		fi
 
-		echo "Staring [$PARALLEL_TASKS] workers..."
+		log_info "dashboard" "Staring [$PARALLEL_TASKS] workers..." 
+		echo "Staring [$PARALLEL_TASKS] workers..." 
 		if workers_start "$PARALLEL_TASKS"
 		then
+			log_info "dashboard" "Staring [$PARALLEL_TASKS] workers ok"
 			echo "Staring [$PARALLEL_TASKS] workers ok"
 		else 
+			log_info "dashboard" "Staring [$PARALLEL_TASKS] workers failed" 
 			echo "Staring [$PARALLEL_TASKS] workers failed"
 		fi
-
-		log_info "dashboard" "Running [$ACTION] command ok" 
 		;;
 	"stop")
-		log_info "dashboard" "Running [$ACTION] command ..." 
-
-		echo "Stopping tasks queue..."
+		log_info "dashboard" "Stopping tasks queue ..."
+		echo "Stopping tasks queue ..." 
 		if tasksqueue_stop 
 		then 
+			log_info "dashboard" "Stopping tasks queue ok" 
 			echo "Stopping tasks queue ok"
 		else
+			log_info "dashboard" "Stopping tasks queue failed" 
 			echo "Stopping tasks queue failed"
 		fi
 	
-		echo "Stopping workers..."
+		log_info "dashboard" "Stopping workers ..."
+		echo "dashboard" "Stopping workers ..." 
 		if workers_stop 
 		then
+			log_info "dashboard" "Stopping workers ok" 
 			echo "Stopping workers ok"
 		else
+			log_info "dashboard" "Stopping workers failed" 
 			echo "Stopping workers failed"
 		fi
-
-		log_info "dashboard" "Running [$ACTION] command ok"
 		;;
 	"add-task")
-		log_info "dashboard" "Running [$ACTION] command ..." 
-
-		TASK_SUCC=$FALSE
-		TASK_FAIL=$FALSE
-
-		# Fill options
+		TASK_SUCC=false
+		TASK_FAIL=false
 		while [ -n "$1" ]
 		do
 			case $1 in 
 				"task")
-					TASK_GOAL=$2
-					shift; shift
+					TASK_GOAL=$2; shift; shift
 					;;
 				"success")
-					TASK_SUCC=$2
-					shift; shift
+					TASK_SUCC=$2; shift; shift
 					;;
 				"fail")
-					TASK_FAIL=$2
-					shift; shift
+					TASK_FAIL=$2; shift; shift
 					;;
 				*)		
 					dashboard_print_usage
@@ -448,91 +291,78 @@ case $ACTION in
 
 		if ! [ -n "$TASK_GOAL" -a -n "$TASK_SUCC" -a -n "$TASK_FAIL" ]
 		then
-			log_info "dashboard" "Running [$ACTION] command failed (Invalid arguments)" 
 			dashboard_print_usage
 			exit 1
 		fi
 		
-		if dashboard_push_task "$TASK_GOAL" "$TASK_SUCC" "$TASK_FAIL" 
+		log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] ..." 
+		if queuedb_push "$TASK_GOAL" "$TASK_SUCC" "$TASK_FAIL"
 		then
 			TASK_ID=$RESULT
-			log_info "dashboard" "Running [$ACTION] command ok" 
-			echo "$TASK_ID"
+			log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] ok (Task added with id [$TASK_ID])"
+			echo "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] ok (Task added with id [$TASK_ID])" 
 			exit 0
 		else
-			log_info "dashboard" "Running [$ACTION] command failed (Pushing task failed)" 
-			echo ""
+			log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] failed (Push failed with code [$?])"
+			echo "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] failed (Push failed with code [$?])"
 			exit 2
 		fi
 		;;
 	"remove-task")
-		log_info "dashboard" "Running [$ACTION] command ..." 
-
 		TASK_ID=$1
-		shift
 		if ! [ -n "$TASK_ID" ]
 		then
-			log_info "dashboard" "Running [$ACTION] command failed (Invalid arguments)" 
 			dashboard_print_usage
 			exit 1
 		fi
 
-		log_info "dashboard" "Removing task [$TASK_ID] from tasks file ..."
-		if dashboard_remove_task "$TASK_ID"
+		log_info "dashboard" "Removing task [$TASK_ID] ..." 
+		if queuedb_delete "$TASK_ID"
 		then
-			log_info "dashboard" "Running [$ACTION] command ok" 
-			echo "Removing task [$TASK_ID] from tasks file ok"
+			log_info "dashboard" "Removing task [$TASK_ID] ok" 
+			echo "Removing task [$TASK_ID] ok" 
 			exit 0
 		else
-			log_info "dashboard" "Running [$ACTION] command failed (Removing task failed)" 
-			echo "Removing task [$TASK_ID] from tasks file failed"
+			log_info "dashboard" "Removing task [$TASK_ID] failed (Remove failed with code [$?])" 
+			echo "Removing task [$TASK_ID] failed (Remove failed with code [$?])"
 			exit 2
 		fi
 		;;
 	"show-task")
-		log_info "dashboard" "Running [$ACTION] command ..." 
-
 		TASK_ID=$1
-		shift
 		if ! [ -n "$TASK_ID" ]
 		then
-			log_info "dashboard" "Running [$ACTION] command failed (Invalid arguments)" 
 			dashboard_print_usage
 			exit 1
 		fi
 
-		if dashboard_get_task "$TASK_ID"
+		log_info "dashboard" "Showing task [$TASK_ID] ..." 
+		if queuedb_find "$TASK_ID"
 		then
-			TASK_GOAL=${RESULT[1]}
-			TASK_SUCC=${RESULT[2]}
-			TASK_FAIL=${RESULT[3]}
-			echo "Task '$TASK_ID': [$TASK_GOAL] success [$TASK_SUCC] fail [$TASK_FAIL]"
-			log_info "dashboard" "Running [$ACTION] command ok" 
+			log_info "dashboard" "Showing task [$TASK_ID] ok" 
+			echo "Task '$TASK_ID': [${RESULT[1]}] success [${RESULT[2]}] fail [${RESULT[3]}]"
 			exit 0
 		else
-			echo "Task '$TASK_ID': "
-			log_info "dashboard" "Running [$ACTION] command failed (Task is not found)" 
+			log_info "dashboard" "Showing task [$TASK_ID] failed (Find failed with code [$?])"
+			echo "Task '$TASK_ID': Not found"
 			exit 1
 		fi
 		;;
 	"list-tasks")
-		log_info "dashboard" "Running [$ACTION] command ..." 
-		if dashboard_get_tasks_ids
+		log_info "dashboard" "Listing all tasks ..." 
+		if queuedb_list
 		then
 			for TASK_ID in "${RESULT[@]}"
 			do
-				if dashboard_get_task "$TASK_ID"
+				if queuedb_find "$TASK_ID"
 				then
-					TASK_GOAL=${RESULT[1]}
-					TASK_SUCC=${RESULT[2]}
-					TASK_FAIL=${RESULT[3]}
-					echo "Task '$TASK_ID': [$TASK_GOAL] success [$TASK_SUCC] fail [$TASK_FAIL]"
+					echo "Task '$TASK_ID': [${RESULT[1]}] success [${RESULT[2]}] fail [${RESULT[3]}]"
 				fi
 			done
-			log_info "dashboard" "Running [$ACTION] command ok" 
+			log_info "dashboard" "Listing all tasks ok"
 			exit 0
 		else
-			echo "Removing task [$TASK_ID] from tasks file failed (Getting task ids failed)"
+			log_info "dashboard" "Listing all tasks failed (Listing failed with code [$?])"
 			exit 1
 		fi
 		;;
