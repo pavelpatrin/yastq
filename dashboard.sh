@@ -189,7 +189,7 @@ tasksqueue_stop()
 ##
 dashboard_print_usage()
 {
-	echo "Usage: $0 start|stop|status|list-tasks"
+	echo "Usage: $0 start|stop|status"
 	echo "       $0 add-task task TASK [success SUCCESS] [fail FAIL]"
 	echo "       $0 show-task TASK_ID"
 	echo "       $0 remove-task TASK_ID"
@@ -200,27 +200,6 @@ ACTION=$1
 shift
 
 case $ACTION in 
-	"status")
-		log_info "dashboard" "Getting workers status ..."  
-		if workers_pids 
-		then 
-			log_info "dashboard" "Workers are running" 
-			echo "Workers are running"
-		else 
-			log_info "dashboard" "Workers are not running" 
-			echo "Workers are not running"
-		fi
-
-		log_info "dashboard" "Getting tasks queue status ..."  
-		if tasksqueue_pid
-		then 
-			log_info "dashboard" "Tasks queue is running" 
-			echo "Tasks queue is running"
-		else
-			log_info "dashboard" "Tasks queue is not running" 
-			echo "Tasks queue is not running"
-		fi
-		;;
 	"start")
 		log_info "dashboard" "Staring tasks queue ..." 
 		echo "Staring tasks queue ..."
@@ -257,7 +236,7 @@ case $ACTION in
 		fi
 	
 		log_info "dashboard" "Stopping workers ..."
-		echo "dashboard" "Stopping workers ..." 
+		echo "Stopping workers ..." 
 		if workers_stop 
 		then
 			log_info "dashboard" "Stopping workers ok" 
@@ -265,6 +244,29 @@ case $ACTION in
 		else
 			log_info "dashboard" "Stopping workers failed" 
 			echo "Stopping workers failed"
+		fi
+		;;
+	"status")
+		log_info "dashboard" "Getting workers status ..."
+		echo "Getting workers status ..."
+		if workers_pids 
+		then 
+			log_info "dashboard" "Workers are running" 
+			echo "Workers are running"
+		else 
+			log_info "dashboard" "Workers are not running" 
+			echo "Workers are not running"
+		fi
+
+		log_info "dashboard" "Getting tasks queue status ..."
+		echo "Getting tasks queue status ..."
+		if tasksqueue_pid
+		then 
+			log_info "dashboard" "Tasks queue is running" 
+			echo "Tasks queue is running"
+		else
+			log_info "dashboard" "Tasks queue is not running" 
+			echo "Tasks queue is not running"
 		fi
 		;;
 	"add-task")
@@ -316,8 +318,8 @@ case $ACTION in
 			exit 1
 		fi
 
-		log_info "dashboard" "Removing task [$TASK_ID] ..." 
-		if queuedb_delete "$TASK_ID"
+		log_info "dashboard" "Removing task [$TASK_ID] ..."
+		if queuedb_remove "$TASK_ID"
 		then
 			log_info "dashboard" "Removing task [$TASK_ID] ok" 
 			echo "Removing task [$TASK_ID] ok" 
@@ -336,7 +338,7 @@ case $ACTION in
 			exit 1
 		fi
 
-		log_info "dashboard" "Showing task [$TASK_ID] ..." 
+		log_info "dashboard" "Showing task [$TASK_ID] ..."
 		if queuedb_find "$TASK_ID"
 		then
 			log_info "dashboard" "Showing task [$TASK_ID] ok" 
@@ -345,24 +347,6 @@ case $ACTION in
 		else
 			log_info "dashboard" "Showing task [$TASK_ID] failed (Find failed with code [$?])"
 			echo "Task '$TASK_ID': Not found"
-			exit 1
-		fi
-		;;
-	"list-tasks")
-		log_info "dashboard" "Listing all tasks ..." 
-		if queuedb_list
-		then
-			for TASK_ID in "${RESULT[@]}"
-			do
-				if queuedb_find "$TASK_ID"
-				then
-					echo "Task '$TASK_ID': [${RESULT[1]}] success [${RESULT[2]}] fail [${RESULT[3]}]"
-				fi
-			done
-			log_info "dashboard" "Listing all tasks ok"
-			exit 0
-		else
-			log_info "dashboard" "Listing all tasks failed (Listing failed with code [$?])"
 			exit 1
 		fi
 		;;

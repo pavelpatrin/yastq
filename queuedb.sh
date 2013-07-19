@@ -22,7 +22,7 @@ QUEUEDB_DB_LOCK_TIMEOUT=$3
 ## Return:
 ##	0 - When all ok
 ##	1 - When lock failed or timed out
-##  2 - When read failed
+##  2 - When read failed [f.e. db is empty]
 ##	3 - When write failed
 ## 
 queuedb_pop()
@@ -91,6 +91,48 @@ queuedb_push()
 }
 
 ## 
+## Selects data in DB file and sets up RESULT variable with found row data
+##
+## Return:
+##	0 - When all ok
+##	1 - When lock failed or timed out
+##  2 - When grep failed (f.e. not found)
+##	3 - When read failed
+## 
+queuedb_find()
+{
+	unset -v RESULT
+	local ROW_ID=$1
+
+	log_debug "queuedb" "Selecting row [$ROW_ID] from [$QUEUEDB_DB_FILE] ..."
+	{
+		if ! flock -x -w "$QUEUEDB_DB_LOCK_TIMEOUT" 200
+		then
+			log_debug "queuedb" "Selecting row [$ROW_ID] from [$QUEUEDB_DB_FILE] failed (Lock with timeout [$QUEUEDB_DB_LOCK_TIMEOUT] failed with code [$?])"
+			return 1
+		fi
+
+		local ROW_LINE=$(grep "^$ROW_ID\s" "$QUEUEDB_DB_FILE")
+		if ! [ -n "$ROW_LINE" ]
+		then
+			log_debug "queuedb" "Selecting row [$ROW_ID] from [$QUEUEDB_DB_FILE] failed (Grep failed with code [$?])"
+			return 2
+		fi
+
+		local ROW_DATA
+		if ! read -a ROW_DATA 0<<<$ROW_LINE
+		then
+			log_debug "queuedb" "Selecting row [$ROW_ID] from [$QUEUEDB_DB_FILE] failed (Read failed with code [$?])"
+			return 3
+		fi
+			
+		log_debug "queuedb" "Selecting row [$ROW_ID] from [$QUEUEDB_DB_FILE] ok"
+		RESULT=("${ROW_DATA[@]}")
+		return 0
+	} 200<"$QUEUEDB_DB_LOCK" 
+}
+
+## 
 ## Removes data from DB file with specified row id
 ##
 ## Params:
@@ -102,7 +144,7 @@ queuedb_push()
 ##  2 - When row not found
 ##  3 - When write failed
 ## 
-queuedb_delete()
+queuedb_remove()
 {
 	unset -v RESULT
 	local ROW_ID=$1
@@ -130,118 +172,4 @@ queuedb_delete()
 		log_debug "queuedb" "Removing row [$ROW_ID] from [$QUEUEDB_DB_FILE] ok"
 		return 0
 	} 200<"$QUEUEDB_DB_LOCK"
-}
-
-## 
-## Finds data in DB file and sets up RESULT variable with found row data
-##
-## Return:
-##	0 - When all ok
-##	1 - When lock failed or timed out
-##  2 - When grep failed (f.e. not found)
-##	3 - When read failed
-## 
-queuedb_find()
-{
-	unset -v RESULT
-	local ROW_ID=$1
-
-	log_debug "queuedb" "Finding row [$ROW_ID] from [$QUEUEDB_DB_FILE] ..."
-	{
-		if ! flock -x -w "$QUEUEDB_DB_LOCK_TIMEOUT" 200
-		then
-			log_debug "queuedb" "Finding row [$ROW_ID] from [$QUEUEDB_DB_FILE] failed (Lock with timeout [$QUEUEDB_DB_LOCK_TIMEOUT] failed with code [$?])"
-			return 1
-		fi
-
-		local ROW_LINE=$(grep "^$ROW_ID\s" "$QUEUEDB_DB_FILE")
-		if ! [ -n "$ROW_LINE" ]
-		then
-			log_debug "queuedb" "Finding row [$ROW_ID] from [$QUEUEDB_DB_FILE] failed (Grep failed with code [$?])"
-			return 2
-		fi
-
-		local ROW_DATA
-		if ! read -a ROW_DATA 0<<<$ROW_LINE
-		then
-			log_debug "queuedb" "Finding row [$ROW_ID] from [$QUEUEDB_DB_FILE] failed (Read failed with code [$?])"
-			return 3
-		fi
-			
-		log_debug "queuedb" "Finding row [$ROW_ID] from [$QUEUEDB_DB_FILE] ok"
-		RESULT=("${ROW_DATA[@]}")
-		return 0
-	} 200<"$QUEUEDB_DB_LOCK" 
-}
-
-## 
-## Lists rows ids in DB file and sets up RESULT variable with collected data
-##
-## Return:
-##	0 - When all ok
-##	1 - When lock failed or timed out
-## 
-queuedb_list()
-{
-	unset -v RESULT
-
-	log_debug "queuedb" "Listing rows ids from [$QUEUEDB_DB_FILE] ..."
-	{
-		if ! flock -x -w "$QUEUEDB_DB_LOCK_TIMEOUT" 200
-		then
-			log_debug "queuedb" "Listing rows ids from [$QUEUEDB_DB_FILE] failed (Lock with timeout [$QUEUEDB_DB_LOCK_TIMEOUT] failed with code [$?])"
-			return 1
-		fi
-
-		local ROW_DATA
-		local ROWS_IDS
-		while read -a ROW_DATA
-		do
-			ROWS_IDS=("${ROWS_IDS[@]}" "${ROW_DATA[0]}")
-		done 0<"$QUEUEDB_DB_FILE"
-
-		log_debug "queuedb" "Listing rows ids from [$QUEUEDB_DB_FILE] ok"
-		RESULT=("${ROWS_IDS[@]}")
-		return 0
-	} 200<"$QUEUEDB_DB_LOCK" 
-}
-
-## 
-## Count rows ids in DB file and sets up RESULT variable with count of rows data
-##
-## Return:
-##	0 - When all ok
-##	1 - When lock failed or timed out
-##  2 - When wc failed (f.e. not found)
-##	3 - When read failed
-## 
-queuedb_count()
-{
-	unset -v RESULT
-
-	log_debug "queuedb" "Counting rows from [$QUEUEDB_DB_FILE] ..."
-	{
-		if ! flock -x -w "$QUEUEDB_DB_LOCK_TIMEOUT" 200
-		then
-			log_debug "queuedb" "Counting rows from [$QUEUEDB_DB_FILE] failed (Lock with timeout [$QUEUEDB_DB_LOCK_TIMEOUT] failed with code [$?])"
-			return 1
-		fi
-
-		local ROWS_COUNT=$(wc -l "$QUEUEDB_DB_FILE")
-		if [ 0 != "$?" ]
-		then
-			log_debug "queuedb" "Counting rows from [$QUEUEDB_DB_FILE] failed (Wc failed with code [$?])"
-			return 2
-		fi
-
-		if ! read -a ROWS_COUNT 0<<<"$ROWS_COUNT"
-		then
-			log_debug "queuedb" "Counting rows from [$QUEUEDB_DB_FILE] failed (Read failed with code [$?])"
-			return 3
-		fi
-
-		log_debug "queuedb" "Counting rows from [$QUEUEDB_DB_FILE] ok"
-		RESULT=("${ROWS_COUNT[1]}")
-		return 0
-	} 200<"$QUEUEDB_DB_LOCK" 
 }

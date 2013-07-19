@@ -64,10 +64,12 @@ worker_task_read()
 	unset -v RESULT
 	
 	log_debug "worker" "Reading task from tasks pipe [$TASKS_PIPE] ..."
-	{
-		if flock -x -w 5 200
+	{	
+		# asyncronous execute flock and wait its exit
+		# it needed because flock does not stops when script handling signal
+		if flock -x 200 & wait $! 
 		then 
-			if read -t 5 -a TASK_DATA 0<"$TASKS_PIPE"
+			if read -a TASK_DATA 0<"$TASKS_PIPE"
 			then
 				log_debug "worker" "Reading task from tasks pipe [$TASKS_PIPE] ok"
 				RESULT=("${TASK_DATA[@]}")
