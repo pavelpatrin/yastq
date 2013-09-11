@@ -310,7 +310,7 @@ case $ACTION in
 			exit 1
 		fi
 		
-		log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] ..." 
+		log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] with options [$TASK_OPTIONS] ..." 
 		if queuedb_push "$TASK_GOAL" "$TASK_SUCC" "$TASK_FAIL" "$TASK_OPTIONS"
 		then
 			TASK_ID=$RESULT
