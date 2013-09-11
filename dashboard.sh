@@ -2,7 +2,7 @@
 
 # Include config file
 [ -r "$HOME/.yastq.conf" ] && source "$HOME/.yastq.conf" || { 
-	[ -r "/etc/yastq.conf" ] && source "/etc/yastq.conf" || { echo "Error: loading config file failed" 1>&2; exit 1; }
+       [ -r "/etc/yastq.conf" ] && source "/etc/yastq.conf" || { echo "Error: loading config file failed" 1>&2; exit 1; }
 }
 
 # Include common file
@@ -190,7 +190,7 @@ tasksqueue_stop()
 dashboard_print_usage()
 {
 	echo "Usage: $0 start|stop|status"
-	echo "       $0 add-task task TASK [success SUCCESS] [fail FAIL]"
+	echo "       $0 add-task task TASK [success SUCCESS] [fail FAIL] [--append-id-task] [--append-id-success] [--append-id-fail]"
 	echo "       $0 show-task TASK_ID"
 	echo "       $0 remove-task TASK_ID"
 }
@@ -272,6 +272,8 @@ case $ACTION in
 	"add-task")
 		TASK_SUCC=false
 		TASK_FAIL=false
+		unset -v TASK_OPTIONS
+
 		while [ -n "$1" ]
 		do
 			case $1 in 
@@ -284,12 +286,23 @@ case $ACTION in
 				"fail")
 					TASK_FAIL=$2; shift; shift
 					;;
+				"--append-id-task")
+					TASK_OPTIONS=( "${TASK_OPTIONS[@]}" "APPEND_ID_TASK" ); shift
+					;;
+				"--append-id-success")
+					TASK_OPTIONS=( "${TASK_OPTIONS[@]}" "APPEND_ID_SUCC" ); shift
+					;;
+				"--append-id-fail")
+					TASK_OPTIONS=( "${TASK_OPTIONS[@]}" "APPEND_ID_FAIL" ); shift
+					;;
 				*)		
 					dashboard_print_usage
 					exit 1
 					;;
 			esac
 		done
+
+		TASK_OPTIONS=$(IFS=:; echo "${TASK_OPTIONS[*]}")
 
 		if ! [ -n "$TASK_GOAL" -a -n "$TASK_SUCC" -a -n "$TASK_FAIL" ]
 		then
@@ -298,15 +311,15 @@ case $ACTION in
 		fi
 		
 		log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] ..." 
-		if queuedb_push "$TASK_GOAL" "$TASK_SUCC" "$TASK_FAIL"
+		if queuedb_push "$TASK_GOAL" "$TASK_SUCC" "$TASK_FAIL" "$TASK_OPTIONS"
 		then
 			TASK_ID=$RESULT
-			log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] ok (Task added with id [$TASK_ID])"
-			echo "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] ok (Task added with id [$TASK_ID])" 
+			log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] with options [$TASK_OPTIONS] ok (Task added with id [$TASK_ID])"
+			echo "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] with options [$TASK_OPTIONS] ok (Task added with id [$TASK_ID])" 
 			exit 0
 		else
-			log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] failed (Push failed with code [$?])"
-			echo "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] failed (Push failed with code [$?])"
+			log_info "dashboard" "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] with options [$TASK_OPTIONS] failed (Push failed with code [$?])"
+			echo "Adding task [$TASK_GOAL][$TASK_SUCC][$TASK_FAIL] with options [$TASK_OPTIONS] failed (Push failed with code [$?])"
 			exit 2
 		fi
 		;;

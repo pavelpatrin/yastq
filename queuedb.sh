@@ -70,21 +70,21 @@ queuedb_push()
 	local ROW_ID=$(date '+%s%N')
 	local ROW_DATA=("$@")
 
-	log_debug "queuedb" "Pushing row [$ROW_ID]:[${ROW_DATA[@]}] to [$QUEUEDB_DB_FILE] ..."
+	log_debug "queuedb" "Pushing row [$ROW_ID] to [$QUEUEDB_DB_FILE] ..."
 	{
 		if ! flock -x -w "$QUEUEDB_DB_LOCK_TIMEOUT" 200
 		then
-			log_debug "queuedb" "Pushing row [$ROW_ID]:[${ROW_DATA[@]}] to [$QUEUEDB_DB_FILE] failed (Lock with timeout [$QUEUEDB_DB_LOCK_TIMEOUT] failed with code [$?])"
+			log_debug "queuedb" "Pushing row [$ROW_ID] to [$QUEUEDB_DB_FILE] failed (Lock with timeout [$QUEUEDB_DB_LOCK_TIMEOUT] failed with code [$?])"
 			return 1
 		fi
 
 		if ! echo $(printf "%q " "$ROW_ID" "${ROW_DATA[@]}") 1>>"$QUEUEDB_DB_FILE"
 		then
-			log_debug "queuedb" "Pushing row [$ROW_ID]:[${ROW_DATA[@]}] to [$QUEUEDB_DB_FILE] failed (Write failed with code [$?])"
+			log_debug "queuedb" "Pushing row [$ROW_ID] to [$QUEUEDB_DB_FILE] failed (Write failed with code [$?])"
 			return 2
 		fi
 
-		log_debug "queuedb" "Pushing row [${ROW_DATA[@]}] to [$QUEUEDB_DB_FILE] ok"
+		log_debug "queuedb" "Pushing row [$ROW_ID] to [$QUEUEDB_DB_FILE] ok"
 		RESULT=$ROW_ID
 		return 0
 	} 200<"$QUEUEDB_DB_LOCK" 

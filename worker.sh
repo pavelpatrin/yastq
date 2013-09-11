@@ -5,7 +5,7 @@ trap worker_graceful_stop SIGTERM SIGINT
 
 # Include config file
 [ -r "$HOME/.yastq.conf" ] && source "$HOME/.yastq.conf" || { 
-	[ -r "/etc/yastq.conf" ] && source "/etc/yastq.conf" || { echo "Error: loading config file failed" 1>&2; exit 1; }
+       [ -r "/etc/yastq.conf" ] && source "/etc/yastq.conf" || { echo "Error: loading config file failed" 1>&2; exit 1; }
 }
 
 # Include common file
@@ -89,18 +89,37 @@ worker_task_read()
 ## Executes specified task with handlers
 ##
 ## Params:
-##	$1 - TASK command
-##	$2 - SUCC handler command
-##	$3 - FAIL handler command
+##	$1 - TASK id
+##	$2 - TASK command
+##	$3 - SUCC handler command
+##	$4 - FAIL handler command
+##	$5 - TASK options
 ##
 ## Returns:
 ##  0 - on success
 ##
 worker_task_execute()
 {
-	local TASK_GOAL=$1
-	local TASK_SUCC=$2
-	local TASK_FAIL=$3
+	local TASK_ID=$1
+	local TASK_GOAL=$2
+	local TASK_SUCC=$3
+	local TASK_FAIL=$4
+	local TASK_OPTIONS=$5
+
+	if [[ "$TASK_OPTIONS" == *APPEND_ID_TASK* ]]
+	then
+		TASK_GOAL="$TASK_GOAL $TASK_ID"
+	fi
+
+	if [[ "$TASK_OPTIONS" == *APPEND_ID_SUCC* ]]
+	then
+		TASK_SUCC="$TASK_SUCC $TASK_ID"
+	fi
+
+	if [[ "$TASK_OPTIONS" == *APPEND_ID_FAIL* ]]
+	then
+		TASK_FAIL="$TASK_FAIL $TASK_ID"
+	fi
 
 	log_debug "worker" "Executing task goal [$TASK_GOAL] ..."
 	if worker_eval "$TASK_GOAL"
@@ -109,18 +128,18 @@ worker_task_execute()
 		log_debug "worker" "Executing task success handler [$TASK_SUCC] ..."
 		if worker_eval "$TASK_SUCC"
 		then
-			log_debug "worker" "Executing success handler [$TASK_SUCC] ok"
+			log_debug "worker" "Executing task success handler [$TASK_SUCC] ok"
 		else
-			log_debug "worker" "Executing success handler [$TASK_SUCC] failed (Exit code [$?])"
+			log_debug "worker" "Executing task success handler [$TASK_SUCC] failed (Exit code [$?])"
 		fi
 	else 
 		log_debug "worker" "Executing task goal [$TASK_GOAL] failed (Exit code [$?])"
-		log_debug "worker" "Executing failure handler [$TASK_FAIL] ..."
+		log_debug "worker" "Executing task failure handler [$TASK_FAIL] ..."
 		if worker_eval "$TASK_FAIL"
 		then
-			log_debug "worker" "Executing failure handler [$TASK_FAIL] ok"
+			log_debug "worker" "Executing task failure handler [$TASK_FAIL] ok"
 		else
-			log_debug "worker" "Executing failure handler [$TASK_FAIL] failed (Exit code [$?])"
+			log_debug "worker" "Executing task failure handler [$TASK_FAIL] failed (Exit code [$?])"
 		fi
 	fi
 
@@ -137,7 +156,7 @@ do
 
 		TASK_INFO=("${RESULT[@]}")
 		log_info "worker" "Executing task [${TASK_INFO[0]}] ..."
-		if worker_task_execute "${TASK_INFO[@]:1:3}"
+		if worker_task_execute "${TASK_INFO[@]:0:5}"
 		then
 			log_info "worker" "Executing task [${TASK_INFO[0]}] ok"
 		else
