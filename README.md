@@ -5,22 +5,22 @@
 4. it is possible to add success (exit code 0) and fail (exit code not 0) handlers for every task
 5. it is possible to remove not started tasks
 
-## Installation:
+## Installation
 1. cd yastq
 2. chmod u+rwX . -R && chmod g-rwx . -R && chmod o-rwx . -R
 3. chmod u+x dashboard.sh tasksqueue.sh worker.sh
 4. copy yastq.conf.sample to ~/.yastq.conf or to /etc/yastq.conf
 
-## Use:
+## Using
 ```bash
 ./dashboard.sh and see usage
 ```
-## Examples:
-### Starting:
+## Examples
+### Starting
 ```bash
 ./dashboard.sh start
 ```
-### Adding tasks:
+### Adding tasks
 #### Simple adding of a new task
 ```bash
 ./dashboard.sh add-task \
@@ -43,7 +43,7 @@ fail "echo Fail > /tmp/queuetest"
 ```bash
 ./dashboard.sh status
 ```
-### Stopping:
+### Stopping
 ```bash
 ./dashboard.sh stop
 ``` 
